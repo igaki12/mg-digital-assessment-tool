@@ -1,0 +1,128 @@
+import { useEffect, useMemo, useState } from "react";
+import Layout from "../components/Layout";
+import { getTimeSeries, getVideo, listSessions } from "../storage/db";
+import type { SessionMeta, TimeSeriesRecord, VideoRecord } from "../types";
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function createCsv(record: TimeSeriesRecord) {
+  if (record.frameData.length === 0 && record.details) {
+    return JSON.stringify(record.details, null, 2);
+  }
+  const headers = new Set<string>();
+  record.frameData.forEach((entry) => {
+    Object.keys(entry).forEach((key) => headers.add(key));
+  });
+  const columns = Array.from(headers);
+  const rows = [columns.join(",")];
+  record.frameData.forEach((entry) => {
+    rows.push(columns.map((col) => String(entry[col as keyof typeof entry] ?? "")).join(","));
+  });
+  return rows.join("\n");
+}
+
+export default function Records() {
+  const [sessions, setSessions] = useState<SessionMeta[]>([]);
+  const [selected, setSelected] = useState<SessionMeta | null>(null);
+  const [record, setRecord] = useState<TimeSeriesRecord | null>(null);
+  const [video, setVideo] = useState<VideoRecord | null>(null);
+
+  useEffect(() => {
+    listSessions().then((data) =>
+      setSessions(data.sort((a, b) => b.date.localeCompare(a.date)))
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!selected) {
+      setRecord(null);
+      setVideo(null);
+      return;
+    }
+    getTimeSeries(selected.id).then((data) => setRecord(data ?? null));
+    getVideo(selected.id).then((data) => setVideo(data ?? null));
+  }, [selected]);
+
+  const videoUrl = useMemo(() => {
+    if (!video) {
+      return null;
+    }
+    return URL.createObjectURL(video.blob);
+  }, [video]);
+
+  useEffect(() => {
+    if (!videoUrl) {
+      return;
+    }
+    return () => URL.revokeObjectURL(videoUrl);
+  }, [videoUrl]);
+
+  return (
+    <Layout>
+      <section className="page-header">
+        <h1>記録を見る</h1>
+        <p>測定履歴と簡易グラフ、動画を確認できます。</p>
+      </section>
+
+      <section className="records-grid">
+        <div className="card">
+          <h2>セッション一覧</h2>
+          {sessions.length === 0 ? (
+            <p>まだ記録がありません。</p>
+          ) : (
+            <div className="list">
+              {sessions.map((session) => (
+                <button
+                  key={session.id}
+                  type="button"
+                  className={
+                    selected?.id === session.id
+                      ? "list-row active"
+                      : "list-row"
+                  }
+                  onClick={() => setSelected(session)}
+                >
+                  <div>
+                    <p className="list-title">{session.type.toUpperCase()}</p>
+                    <p className="list-sub">{formatDate(session.date)}</p>
+                  </div>
+                  <span className="badge">{session.summaryScore.toFixed(2)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h2>詳細</h2>
+          {!selected ? (
+            <p>左の一覧から記録を選択してください。</p>
+          ) : (
+            <div className="detail">
+              <p className="detail-title">
+                {selected.type.toUpperCase()} | {formatDate(selected.date)}
+              </p>
+              <p className="detail-note">{selected.notes ?? ""}</p>
+              {record ? (
+                <pre className="detail-pre">{createCsv(record)}</pre>
+              ) : (
+                <p>詳細データがありません。</p>
+              )}
+              {videoUrl ? (
+                <video className="detail-video" src={videoUrl} controls />
+              ) : null}
+            </div>
+          )}
+        </div>
+      </section>
+    </Layout>
+  );
+}

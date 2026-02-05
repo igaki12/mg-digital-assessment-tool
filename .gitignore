@@ -1,0 +1,6 @@
+node_modules
+.DS_Store
+vite.config.ts.timestamp-*
+
+# build output (using /docs for GitHub Pages, keep it tracked if desired)
+# docs
