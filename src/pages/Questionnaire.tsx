@@ -56,23 +56,27 @@ export default function Questionnaire() {
                 <p className="question-title">{item.label}</p>
                 <p className="question-desc">{item.description}</p>
               </div>
-              <div className="score-group">
-                {Array.from({ length: item.maxScore + 1 }, (_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={
-                      adlScores[item.id] === idx
-                        ? "score-button active"
-                        : "score-button"
-                    }
-                    onClick={() =>
-                      setAdlScores((prev) => ({ ...prev, [item.id]: idx }))
-                    }
-                  >
-                    {idx}
-                  </button>
-                ))}
+              <div className="nrs-row">
+                <span className="nrs-anchor">{item.leftLabel}</span>
+                <div className="score-group">
+                  {Array.from({ length: item.maxScore + 1 }, (_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={
+                        adlScores[item.id] === idx
+                          ? "score-button active"
+                          : "score-button"
+                      }
+                      onClick={() =>
+                        setAdlScores((prev) => ({ ...prev, [item.id]: idx }))
+                      }
+                    >
+                      {idx}
+                    </button>
+                  ))}
+                </div>
+                <span className="nrs-anchor">{item.rightLabel}</span>
               </div>
             </div>
           ))}
@@ -90,23 +94,27 @@ export default function Questionnaire() {
                 <p className="question-title">{item.label}</p>
                 <p className="question-desc">{item.description}</p>
               </div>
-              <div className="score-group">
-                {Array.from({ length: item.maxScore + 1 }, (_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={
-                      qolScores[item.id] === idx
-                        ? "score-button active"
-                        : "score-button"
-                    }
-                    onClick={() =>
-                      setQolScores((prev) => ({ ...prev, [item.id]: idx }))
-                    }
-                  >
-                    {idx}
-                  </button>
-                ))}
+              <div className="nrs-row">
+                <span className="nrs-anchor">{item.leftLabel}</span>
+                <div className="score-group">
+                  {Array.from({ length: item.maxScore + 1 }, (_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={
+                        qolScores[item.id] === idx
+                          ? "score-button active"
+                          : "score-button"
+                      }
+                      onClick={() =>
+                        setQolScores((prev) => ({ ...prev, [item.id]: idx }))
+                      }
+                    >
+                      {idx}
+                    </button>
+                  ))}
+                </div>
+                <span className="nrs-anchor">{item.rightLabel}</span>
               </div>
             </div>
           ))}

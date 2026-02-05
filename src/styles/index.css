@@ -402,6 +402,20 @@ p {
   gap: 0.4rem;
 }
 
+.nrs-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  text-align: center;
+}
+
+.nrs-anchor {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
 .score-button {
   min-width: 2.4rem;
   height: 2.4rem;
@@ -461,5 +475,11 @@ p {
 
   .score-group {
     justify-content: flex-start;
+  }
+
+  .nrs-row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    text-align: left;
   }
 }
