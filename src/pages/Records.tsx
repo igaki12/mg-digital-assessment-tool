@@ -13,6 +13,13 @@ function formatDate(value: string) {
   });
 }
 
+const typeLabels: Record<SessionMeta["type"], string> = {
+  ptosis: "眼瞼下垂",
+  limbs: "上肢の筋力",
+  gait: "歩行動作",
+  epro: "症状の問診"
+};
+
 function createCsv(record: TimeSeriesRecord) {
   if (record.frameData.length === 0 && record.details) {
     return JSON.stringify(record.details, null, 2);
@@ -91,7 +98,9 @@ export default function Records() {
                   onClick={() => setSelected(session)}
                 >
                   <div>
-                    <p className="list-title">{session.type.toUpperCase()}</p>
+                    <p className="list-title">
+                      {session.type.toUpperCase()} / {typeLabels[session.type]}
+                    </p>
                     <p className="list-sub">{formatDate(session.date)}</p>
                   </div>
                   <span className="badge">{session.summaryScore.toFixed(2)}</span>
