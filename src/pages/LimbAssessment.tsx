@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { addSession, addTimeSeries } from "../storage/db";
@@ -7,10 +8,13 @@ import type { TimeSeriesEntry } from "../types";
 
 export default function LimbAssessment() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const seriesRef = useRef<TimeSeriesEntry[]>([]);
+  const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const [running, setRunning] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(true);
   const [leftAngle, setLeftAngle] = useState(0);
   const [rightAngle, setRightAngle] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -23,6 +27,11 @@ export default function LimbAssessment() {
     frameRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
     setRunning(false);
   }, []);
 
@@ -31,12 +40,39 @@ export default function LimbAssessment() {
     if (!video) {
       return;
     }
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
     const landmarker = await getPoseLandmarker();
     const now = performance.now();
     const result = landmarker.detectForVideo(video, now);
     const angles = extractArmAngles(result);
     setLeftAngle(angles.left);
     setRightAngle(angles.right);
+
+    if (canvas && ctx && showOverlay && result.landmarks?.length) {
+      if (!drawingUtilsRef.current) {
+        drawingUtilsRef.current = new DrawingUtils(ctx);
+      }
+      if (video.videoWidth && video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const drawingUtils = drawingUtilsRef.current;
+      for (const landmarks of result.landmarks) {
+        drawingUtils.drawLandmarks(landmarks, {
+          color: "rgba(102, 208, 255, 0.35)",
+          radius: 2
+        });
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "rgba(102, 208, 255, 0.5)", lineWidth: 2 }
+        );
+      }
+    } else if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
 
     const timestamp = Date.now();
     seriesRef.current.push({
@@ -48,7 +84,7 @@ export default function LimbAssessment() {
       setDuration(Math.floor((timestamp - startTimeRef.current) / 1000));
     }
     frameRef.current = requestAnimationFrame(tick);
-  }, []);
+  }, [showOverlay]);
 
   const start = useCallback(async () => {
     if (running) {
@@ -98,6 +134,12 @@ export default function LimbAssessment() {
     return () => stopStream();
   }, [stopStream]);
 
+  useEffect(() => {
+    if (!showOverlay) {
+      drawingUtilsRef.current = null;
+    }
+  }, [showOverlay]);
+
   return (
     <Layout>
       <section className="page-header">
@@ -107,6 +149,9 @@ export default function LimbAssessment() {
       <section className="camera-panel">
         <div className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
+          {showOverlay ? (
+            <canvas ref={canvasRef} className="camera-canvas" />
+          ) : null}
           <div className="camera-overlay">
             <p>腕が枠内に収まるように調整</p>
           </div>
@@ -130,6 +175,13 @@ export default function LimbAssessment() {
             </PrimaryButton>
             <button className="ghost-button" onClick={save}>
               停止して保存
+            </button>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => setShowOverlay((prev) => !prev)}
+            >
+              {showOverlay ? "推定表示をOFF" : "推定表示をON"}
             </button>
           </div>
         </div>
