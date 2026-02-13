@@ -15,6 +15,13 @@ function formatDate(value: string) {
   });
 }
 
+const typeLabels: Record<SessionMeta["type"], string> = {
+  ptosis: "眼瞼下垂",
+  limbs: "上肢の筋力",
+  gait: "歩行動作",
+  epro: "症状の問診"
+};
+
 export default function Dashboard() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
 
@@ -101,7 +108,9 @@ export default function Dashboard() {
             {recent.map((session) => (
               <div key={session.id} className="list-row">
                 <div>
-                  <p className="list-title">{session.type.toUpperCase()}</p>
+                  <p className="list-title">
+                    {session.type.toUpperCase()} / {typeLabels[session.type]}
+                  </p>
                   <p className="list-sub">{formatDate(session.date)}</p>
                 </div>
                 <span className="badge">{session.summaryScore.toFixed(2)}</span>
