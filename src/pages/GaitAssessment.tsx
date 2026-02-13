@@ -66,6 +66,11 @@ export default function GaitAssessment() {
       if (!drawingUtilsRef.current) {
         drawingUtilsRef.current = new DrawingUtils(ctx);
       }
+      const rect = video.getBoundingClientRect();
+      if (rect.width && rect.height) {
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+      }
       if (video.videoWidth && video.videoHeight) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
