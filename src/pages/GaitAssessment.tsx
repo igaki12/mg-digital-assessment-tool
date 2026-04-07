@@ -216,19 +216,7 @@ export default function GaitAssessment() {
             <p>全身が映る位置にカメラを固定</p>
           </div>
         </div>
-        <div className="camera-metrics">
-          <div className="metric">
-            <span>推定歩行速度</span>
-            <strong>{speed.toFixed(2)} m/s</strong>
-          </div>
-          <div className="metric">
-            <span>膝角度 左</span>
-            <strong>{leftKnee.toFixed(1)}°</strong>
-          </div>
-          <div className="metric">
-            <span>膝角度 右</span>
-            <strong>{rightKnee.toFixed(1)}°</strong>
-          </div>
+        <div className="camera-sidebar">
           <div className="button-row">
             <PrimaryButton onClick={start} disabled={running}>
               監視開始
@@ -243,6 +231,20 @@ export default function GaitAssessment() {
             >
               {showOverlay ? "推定表示をOFF" : "推定表示をON"}
             </button>
+          </div>
+          <div className="camera-metrics">
+            <div className="metric">
+              <span>推定歩行速度</span>
+              <strong>{speed.toFixed(2)} m/s</strong>
+            </div>
+            <div className="metric">
+              <span>膝角度 左</span>
+              <strong>{leftKnee.toFixed(1)}°</strong>
+            </div>
+            <div className="metric">
+              <span>膝角度 右</span>
+              <strong>{rightKnee.toFixed(1)}°</strong>
+            </div>
           </div>
         </div>
       </section>

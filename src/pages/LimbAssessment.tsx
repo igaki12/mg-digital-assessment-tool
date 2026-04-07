@@ -161,19 +161,7 @@ export default function LimbAssessment() {
             <p>腕が枠内に収まるように調整</p>
           </div>
         </div>
-        <div className="camera-metrics">
-          <div className="metric">
-            <span>経過時間</span>
-            <strong>{duration}s</strong>
-          </div>
-          <div className="metric">
-            <span>左腕角度</span>
-            <strong>{leftAngle.toFixed(1)}°</strong>
-          </div>
-          <div className="metric">
-            <span>右腕角度</span>
-            <strong>{rightAngle.toFixed(1)}°</strong>
-          </div>
+        <div className="camera-sidebar">
           <div className="button-row">
             <PrimaryButton onClick={start} disabled={running}>
               測定開始
@@ -188,6 +176,20 @@ export default function LimbAssessment() {
             >
               {showOverlay ? "推定表示をOFF" : "推定表示をON"}
             </button>
+          </div>
+          <div className="camera-metrics">
+            <div className="metric">
+              <span>経過時間</span>
+              <strong>{duration}s</strong>
+            </div>
+            <div className="metric">
+              <span>左腕角度</span>
+              <strong>{leftAngle.toFixed(1)}°</strong>
+            </div>
+            <div className="metric">
+              <span>右腕角度</span>
+              <strong>{rightAngle.toFixed(1)}°</strong>
+            </div>
           </div>
         </div>
       </section>

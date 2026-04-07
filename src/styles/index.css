@@ -244,6 +244,11 @@ p {
   align-items: start;
 }
 
+.camera-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
 .camera-frame {
   position: relative;
   background: #001514;

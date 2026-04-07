@@ -173,19 +173,7 @@ export default function PtosisAssessment() {
             <p>頭を固定して目線だけ上へ</p>
           </div>
         </div>
-        <div className="camera-metrics">
-          <div className="metric">
-            <span>経過時間</span>
-            <strong>{elapsed}s</strong>
-          </div>
-          <div className="metric">
-            <span>EAR 左</span>
-            <strong>{earLeft.toFixed(3)}</strong>
-          </div>
-          <div className="metric">
-            <span>EAR 右</span>
-            <strong>{earRight.toFixed(3)}</strong>
-          </div>
+        <div className="camera-sidebar">
           <div className="button-row">
             <PrimaryButton onClick={start} disabled={running}>
               測定開始
@@ -200,6 +188,20 @@ export default function PtosisAssessment() {
             >
               {showOverlay ? "推定表示をOFF" : "推定表示をON"}
             </button>
+          </div>
+          <div className="camera-metrics">
+            <div className="metric">
+              <span>経過時間</span>
+              <strong>{elapsed}s</strong>
+            </div>
+            <div className="metric">
+              <span>EAR 左</span>
+              <strong>{earLeft.toFixed(3)}</strong>
+            </div>
+            <div className="metric">
+              <span>EAR 右</span>
+              <strong>{earRight.toFixed(3)}</strong>
+            </div>
           </div>
         </div>
       </section>
