@@ -108,6 +108,7 @@ p {
 
 @media (max-width: 640px) {
   .app-main {
+    padding-top: -1rem;
     padding-left: 0;
     padding-right: 0;
   }
