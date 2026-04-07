@@ -149,6 +149,12 @@ export default function Dashboard() {
             grid-template-columns: 1.2fr 0.8fr;
           }
         }
+        @media (max-width: 640px) {
+          .dashboard-hero-content {
+            padding: 3rem 1.4rem;
+            gap: 2rem;
+          }
+        }
         .dashboard-hero-content h1,
         .dashboard-hero-content h2,
         .dashboard-hero-content h3,
