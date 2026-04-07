@@ -60,7 +60,7 @@ export default function Dashboard() {
         .dashboard-hero-bg {
           position: absolute;
           inset: 0;
-          background-image: url('/background-top.jpg');
+          background-image: url('${import.meta.env.BASE_URL}background-top.jpg');
           background-size: cover;
           background-position: center;
           opacity: 0.4;

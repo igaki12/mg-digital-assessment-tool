@@ -76,7 +76,7 @@ Error generating stack: `+o.message+`
         .dashboard-hero-bg {
           position: absolute;
           inset: 0;
-          background-image: url('/background-top.jpg');
+          background-image: url('/MG-digital-assessment-tool/background-top.jpg');
           background-size: cover;
           background-position: center;
           opacity: 0.4;
