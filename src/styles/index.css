@@ -106,6 +106,13 @@ p {
   gap: 2rem;
 }
 
+@media (max-width: 640px) {
+  .app-main {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 .app-footer {
   padding: 1.4rem 5vw;
   border-top: 1px solid var(--border);
