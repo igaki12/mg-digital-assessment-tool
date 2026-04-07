@@ -175,19 +175,22 @@ export default function PtosisAssessment() {
         </div>
         <div className="camera-sidebar">
           <div className="button-row">
-            <PrimaryButton onClick={start} disabled={running}>
-              測定開始
-            </PrimaryButton>
-            <button className="ghost-button" onClick={save}>
-              停止して保存
-            </button>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => setShowOverlay((prev) => !prev)}
-            >
-              {showOverlay ? "推定表示をOFF" : "推定表示をON"}
-            </button>
+            {running ? (
+              <>
+                <button className="ghost-button" onClick={save}>
+                  停止して保存
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => setShowOverlay((prev) => !prev)}
+                >
+                  {showOverlay ? "推定表示をOFF" : "推定表示をON"}
+                </button>
+              </>
+            ) : (
+              <PrimaryButton onClick={start}>測定開始</PrimaryButton>
+            )}
           </div>
           <div className="camera-metrics">
             <div className="metric">

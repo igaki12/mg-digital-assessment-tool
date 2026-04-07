@@ -207,18 +207,80 @@ p {
 }
 
 .primary-button {
-  background: var(--accent);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, #0e6f57 0%, #1f9f72 45%, #7fd6aa 100%);
   color: white;
   border: none;
-  padding: 0.7rem 1.4rem;
+  padding: 0.8rem 1.5rem;
   border-radius: 999px;
   font-size: 1rem;
   cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 10px 24px rgba(18, 120, 88, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px rgba(18, 120, 88, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.primary-button:active {
+  transform: translateY(0);
+  filter: saturate(1.08);
+}
+
+.primary-button-wave::before,
+.primary-button-wave::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.primary-button-wave::before {
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.18) 46%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  transform: translateX(-120%) skewX(-18deg);
+  animation: primary-sheen 3.4s ease-in-out infinite;
+}
+
+.primary-button-wave::after {
+  background: radial-gradient(
+    circle,
+    rgba(176, 255, 216, 0.32) 0%,
+    rgba(176, 255, 216, 0.12) 34%,
+    rgba(176, 255, 216, 0) 70%
+  );
+  animation: primary-pulse 2.8s ease-in-out infinite;
 }
 
 .primary-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 8px 18px rgba(18, 120, 88, 0.18);
+}
+
+.primary-button-wave:disabled::before,
+.primary-button-wave:disabled::after {
+  animation: none;
 }
 
 .ghost-button {
@@ -229,6 +291,30 @@ p {
   border-radius: 999px;
   cursor: pointer;
   font-size: 1rem;
+}
+
+@keyframes primary-sheen {
+  0%,
+  100% {
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateX(120%) skewX(-18deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes primary-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
 }
 
 .text-link {

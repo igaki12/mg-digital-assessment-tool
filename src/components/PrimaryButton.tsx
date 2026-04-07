@@ -7,7 +7,9 @@ export default function PrimaryButton({
   return (
     <button
       {...props}
-      className={`primary-button${className ? ` ${className}` : ""}`}
+      className={`primary-button primary-button-wave${
+        className ? ` ${className}` : ""
+      }`}
     />
   );
 }
