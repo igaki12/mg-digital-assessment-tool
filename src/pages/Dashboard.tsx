@@ -41,7 +41,7 @@ const assessmentSpotlights: Record<
     tools: ["Face Landmarker", "EAR算出", "フロントカメラ"],
     checks: ["まぶたの開き具合", "左右の差", "時間経過による低下"],
     accent: "linear-gradient(135deg, #0d5f6b 0%, #1a8b95 45%, #8be2ea 100%)",
-    to: "/assessments/ptosis"
+    to: "/ptosis"
   },
   limbs: {
     title: "上肢挙上テスト",
@@ -51,7 +51,7 @@ const assessmentSpotlights: Record<
     tools: ["Pose Landmarker", "肩関節角度計算", "フロントカメラ"],
     checks: ["腕の保持角度", "左右差", "維持時間と低下タイミング"],
     accent: "linear-gradient(135deg, #0f6b55 0%, #1fa06f 48%, #9be0b8 100%)",
-    to: "/assessments/limbs"
+    to: "/limbs"
   },
   gait: {
     title: "歩行監視モード",
@@ -61,7 +61,7 @@ const assessmentSpotlights: Record<
     tools: ["Pose Landmarker", "歩行速度推定", "環境カメラ / 背面カメラ"],
     checks: ["推定歩行速度", "膝関節の曲がり", "姿勢と移動の安定性"],
     accent: "linear-gradient(135deg, #124a78 0%, #1f7ec8 46%, #95d5ff 100%)",
-    to: "/assessments/gait"
+    to: "/gait"
   },
   epro: {
     title: "症状の問診",
@@ -71,7 +71,7 @@ const assessmentSpotlights: Record<
     tools: ["ePRO質問票", "MG-ADL相当項目", "QOL相当項目"],
     checks: ["生活動作への影響", "主観的なつらさ", "前回との変化"],
     accent: "linear-gradient(135deg, #6c4a11 0%, #b9851f 48%, #f3d88a 100%)",
-    to: "/assessments/questionnaire"
+    to: "/questionnaire"
   }
 };
 
