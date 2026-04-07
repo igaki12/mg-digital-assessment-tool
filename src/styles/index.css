@@ -340,13 +340,14 @@ p {
   background: #001514;
   border-radius: 16px;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--camera-aspect-ratio, 4 / 3);
 }
 
 .camera-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  display: block;
 }
 
 .camera-canvas {

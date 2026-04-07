@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
+import { syncOverlayCanvas } from "../mediapipe/canvas";
 import { addSession, addTimeSeries } from "../storage/db";
 import { extractArmAngles, getPoseLandmarker } from "../mediapipe/pose";
 import type { TimeSeriesEntry } from "../types";
 
 export default function LimbAssessment() {
+  const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -53,15 +55,7 @@ export default function LimbAssessment() {
       if (!drawingUtilsRef.current) {
         drawingUtilsRef.current = new DrawingUtils(ctx);
       }
-      const rect = video.getBoundingClientRect();
-      if (rect.width && rect.height) {
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
-      }
-      if (video.videoWidth && video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
+      syncOverlayCanvas(video, canvas, frameElementRef.current);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const drawingUtils = drawingUtilsRef.current;
       for (const landmarks of result.landmarks) {
@@ -103,6 +97,13 @@ export default function LimbAssessment() {
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      if (canvasRef.current) {
+        syncOverlayCanvas(
+          videoRef.current,
+          canvasRef.current,
+          frameElementRef.current
+        );
+      }
     }
     seriesRef.current = [];
     startTimeRef.current = Date.now();
@@ -152,7 +153,7 @@ export default function LimbAssessment() {
         <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
       </section>
       <section className="camera-panel">
-        <div className="camera-frame">
+        <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />

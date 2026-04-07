@@ -3,6 +3,7 @@ import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { addSession, addTimeSeries, addVideo } from "../storage/db";
+import { syncOverlayCanvas } from "../mediapipe/canvas";
 import {
   estimateBodyHeightPixels,
   extractHipCenter,
@@ -13,6 +14,7 @@ import { getUserHeight } from "../storage/settings";
 import type { TimeSeriesEntry } from "../types";
 
 export default function GaitAssessment() {
+  const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -66,15 +68,7 @@ export default function GaitAssessment() {
       if (!drawingUtilsRef.current) {
         drawingUtilsRef.current = new DrawingUtils(ctx);
       }
-      const rect = video.getBoundingClientRect();
-      if (rect.width && rect.height) {
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
-      }
-      if (video.videoWidth && video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
+      syncOverlayCanvas(video, canvas, frameElementRef.current);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const drawingUtils = drawingUtilsRef.current;
       for (const landmarks of result.landmarks) {
@@ -136,6 +130,13 @@ export default function GaitAssessment() {
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      if (canvasRef.current) {
+        syncOverlayCanvas(
+          videoRef.current,
+          canvasRef.current,
+          frameElementRef.current
+        );
+      }
     }
     chunksRef.current = [];
     lastHipRef.current = null;
@@ -207,7 +208,7 @@ export default function GaitAssessment() {
         <p>カメラの前に立つと録画が始まります。いつも通り歩いてください。</p>
       </section>
       <section className="camera-panel">
-        <div className="camera-frame">
+        <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />

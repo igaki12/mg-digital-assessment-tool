@@ -69,7 +69,7 @@ export default function Dashboard() {
         .dashboard-hero-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(8, 12, 16, 0.95) 0%, rgba(16, 42, 43, 0.75) 100%);
+          background: linear-gradient(135deg, rgba(8, 12, 16, 0.3) 0%, rgba(16, 42, 43, 0.75) 100%);
         }
         @keyframes pan-bg {
           0% { transform: scale(1.0) translate(0, 0); }
