@@ -5,7 +5,7 @@ const navItems = [
   { to: "/", label: "ホーム" },
   { to: "/assessments", label: "検査を始める" },
   { to: "/records", label: "記録を見る" },
-  { to: "/review", label: "医師レビュー" },
+  { to: "/review", label: "医師共有" },
   { to: "/settings", label: "設定" }
 ];
 

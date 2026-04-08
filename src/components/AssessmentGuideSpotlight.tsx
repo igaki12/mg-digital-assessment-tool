@@ -355,9 +355,6 @@ export default function AssessmentGuideSpotlight({
 
           <div className="dashboard-spotlight-panel">
             <div className="dashboard-spotlight-copy" style={spotlightAccentStyle}>
-              <span className="dashboard-spotlight-kicker">
-                Selected Assessment
-              </span>
               <h2>{spotlight.title}</h2>
               <p className="dashboard-spotlight-lead">{spotlight.tagline}</p>
               <p>{spotlight.description}</p>

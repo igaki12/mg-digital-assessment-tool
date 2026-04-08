@@ -52,6 +52,18 @@ export async function getVideo(sessionId: number) {
   return (await db.get("videos", sessionId)) as VideoRecord | undefined;
 }
 
+export async function deleteVideos(sessionIds: number[]) {
+  if (sessionIds.length === 0) {
+    return;
+  }
+  const db = await dbPromise;
+  const tx = db.transaction("videos", "readwrite");
+  for (const sessionId of sessionIds) {
+    await tx.store.delete(sessionId);
+  }
+  await tx.done;
+}
+
 export async function pruneVideos(limit: number) {
   const db = await dbPromise;
   const tx = db.transaction("videos", "readwrite");
