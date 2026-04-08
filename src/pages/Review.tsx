@@ -20,6 +20,19 @@ function formatDate(value: string) {
   });
 }
 
+function getDayCount(values: string[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a.localeCompare(b));
+  const first = new Date(sorted[0] ?? "");
+  const last = new Date(sorted[sorted.length - 1] ?? sorted[0] ?? "");
+  const start = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  const end = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / dayMs) + 1);
+}
+
 const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
@@ -45,16 +58,6 @@ type LoginFormState = {
 
 const uploadSteps = ["準備中", "暗号化中", "アップロード中", "完了処理中"] as const;
 const uploadStepDurations = [700, 900, 1400, 800] as const;
-
-function formatDateRange(values: string[]) {
-  if (values.length === 0) {
-    return "同期待ちはありません";
-  }
-  const sorted = [...values].sort((a, b) => a.localeCompare(b));
-  const first = sorted[0] ?? "";
-  const last = sorted[sorted.length - 1] ?? first;
-  return `${formatDate(first)} - ${formatDate(last)}`;
-}
 
 function formatBytes(value: number) {
   if (value <= 0) {
@@ -107,6 +110,21 @@ export default function Review() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!showTermsModal) {
+      return;
+    }
+    const { body, documentElement } = document;
+    const originalBodyOverflow = body.style.overflow;
+    const originalHtmlOverflow = documentElement.style.overflow;
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = originalBodyOverflow;
+      documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, [showTermsModal]);
 
   useEffect(() => {
     let active = true;
@@ -163,8 +181,8 @@ export default function Review() {
       ),
     [unsyncedCandidates]
   );
-  const pendingDateRange = useMemo(
-    () => formatDateRange(unsyncedCandidates.map((candidate) => candidate.session.date)),
+  const pendingDayCount = useMemo(
+    () => getDayCount(unsyncedCandidates.map((candidate) => candidate.session.date)),
     [unsyncedCandidates]
   );
   const estimatedUploadSeconds = useMemo(() => {
@@ -195,8 +213,8 @@ export default function Review() {
     [syncedVideoCandidates]
   );
   const canSubmit =
-    isLoggedIn &&
-    loginForm.agreedToTerms &&
+    Boolean(isLoggedIn) &&
+    Boolean(loginForm.agreedToTerms) &&
     unsyncedCandidates.length > 0 &&
     uploadPhase !== "authing" &&
     uploadPhase !== "uploading";
@@ -309,8 +327,8 @@ export default function Review() {
         />
         <StatCard
           title="未同期期間"
-          value={pendingDateRange}
-          note="最古の未同期記録から最新の未同期記録までを表示しています。"
+          value={pendingDayCount > 0 ? `${pendingDayCount}日間` : "0日"}
+          note="未同期データがまたがる期間を日数で表示しています。"
         />
         <StatCard
           title="最終送信"
@@ -379,32 +397,29 @@ export default function Review() {
             <span>ログイン状態を保持する</span>
           </label>
 
-          <label className="sync-checkbox-row">
-            <input
-              type="checkbox"
-              checked={loginForm.agreedToTerms}
-              onChange={(event) =>
-                setLoginForm((prev) => ({
-                  ...prev,
-                  agreedToTerms: event.target.checked
-                }))
-              }
-              disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-            />
-            <span>
-              利用規約に同意する
-              <button
-                type="button"
-                className="sync-inline-link"
-                onClick={(event) => {
-                  event.preventDefault();
-                  setShowTermsModal(true);
-                }}
-              >
-                利用規約を開く
-              </button>
-            </span>
-          </label>
+          <div className="sync-checkbox-row sync-checkbox-split">
+            <label className="sync-checkbox-label">
+              <input
+                type="checkbox"
+                checked={loginForm.agreedToTerms}
+                onChange={(event) =>
+                  setLoginForm((prev) => ({
+                    ...prev,
+                    agreedToTerms: event.target.checked
+                  }))
+                }
+                disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
+              />
+              <span>利用規約に同意する</span>
+            </label>
+            <button
+              type="button"
+              className="sync-inline-link"
+              onClick={() => setShowTermsModal(true)}
+            >
+              利用規約を開く
+            </button>
+          </div>
         </div>
 
         <div className="button-row">
@@ -678,6 +693,18 @@ export default function Review() {
                   この同期画面は UI 検証用のダミーであり、実ネットワーク通信や正式な認証は実施しません。表示上の待機時間とローディングのみ提供します。
                 </p>
               </section>
+            </div>
+
+            <div className="button-row">
+              <PrimaryButton
+                type="button"
+                onClick={() => {
+                  setLoginForm((prev) => ({ ...prev, agreedToTerms: true }));
+                  setShowTermsModal(false);
+                }}
+              >
+                同意して閉じる
+              </PrimaryButton>
             </div>
           </div>
         </div>

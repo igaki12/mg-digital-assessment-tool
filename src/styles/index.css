@@ -693,6 +693,18 @@ p {
   color: var(--ink);
 }
 
+.sync-checkbox-split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.sync-checkbox-label {
+  display: inline-flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  color: var(--ink);
+}
+
 .sync-checkbox-row input {
   margin-top: 0.3rem;
 }
