@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import AssessmentGuideSpotlight from "../components/AssessmentGuideSpotlight";
 import Layout from "../components/Layout";
 
 const cards = [
@@ -42,6 +43,7 @@ export default function Assessments() {
           </Link>
         ))}
       </section>
+      <AssessmentGuideSpotlight defaultSelected="ptosis" />
     </Layout>
   );
 }
