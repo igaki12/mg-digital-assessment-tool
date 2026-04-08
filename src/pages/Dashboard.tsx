@@ -122,9 +122,16 @@ export default function Dashboard() {
           inset: 0;
           background-image: url('${import.meta.env.BASE_URL}background-top.jpg');
           background-size: cover;
-          background-position: center;
+          background-position: 72% center;
+          transform-origin: 72% center;
           opacity: 0.4;
           animation: pan-bg 25s linear infinite alternate;
+        }
+        @media (max-width: 640px) {
+          .dashboard-hero-bg {
+            background-position: 70% center;
+            transform-origin: 70% center;
+          }
         }
         .dashboard-hero-overlay {
           position: absolute;
@@ -132,8 +139,8 @@ export default function Dashboard() {
           background: linear-gradient(135deg, rgba(8, 12, 16, 0.3) 0%, rgba(16, 42, 43, 0.75) 100%);
         }
         @keyframes pan-bg {
-          0% { transform: scale(1.0) translate(0, 0); }
-          100% { transform: scale(1.1) translate(-2%, 2%); }
+          0% { transform: scale(1.0) translateY(0); }
+          100% { transform: scale(1.08) translateY(2%); }
         }
         .dashboard-hero-content {
           position: relative;
@@ -603,27 +610,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="card dashboard-card fade-in-up delay-5" style={{ marginTop: "1.2rem" }}>
-        <h2>最新の記録</h2>
-        {recent.length === 0 ? (
-          <p>まだ記録がありません。最初の検査を開始してください。</p>
-        ) : (
-          <div className="list">
-            {recent.map((session) => (
-              <div key={session.id} className="list-row">
-                <div>
-                  <p className="list-title">
-                    {session.type.toUpperCase()} / {typeLabels[session.type]}
-                  </p>
-                  <p className="list-sub">{formatDate(session.date)}</p>
-                </div>
-                <span className="badge">{session.summaryScore.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
       <section className="dashboard-spotlight fade-in-up delay-5">
         <div className="dashboard-spotlight-inner">
           <div>
@@ -703,6 +689,27 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="card dashboard-card fade-in-up delay-5" style={{ marginTop: "1.2rem" }}>
+        <h2>最新の記録</h2>
+        {recent.length === 0 ? (
+          <p>まだ記録がありません。最初の検査を開始してください。</p>
+        ) : (
+          <div className="list">
+            {recent.map((session) => (
+              <div key={session.id} className="list-row">
+                <div>
+                  <p className="list-title">
+                    {session.type.toUpperCase()} / {typeLabels[session.type]}
+                  </p>
+                  <p className="list-sub">{formatDate(session.date)}</p>
+                </div>
+                <span className="badge">{session.summaryScore.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </Layout>
   );
