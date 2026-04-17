@@ -269,7 +269,7 @@ export default function PtosisAssessment() {
         </p>
       </section>
 
-      <section className="card phase-card">
+      <section className="card phase-card ptosis-phase-card">
         <p className="phase-label">現在のフェーズ</p>
         <div className="phase-banner">
           <strong>
@@ -282,7 +282,7 @@ export default function PtosisAssessment() {
         </div>
       </section>
 
-      <section className="camera-panel">
+      <section className="camera-panel ptosis-camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
           {showOverlay ? (
@@ -297,8 +297,8 @@ export default function PtosisAssessment() {
             centerSecondary={overlaySecondary}
           />
         </div>
-        <div className="camera-sidebar">
-          <div className="button-row">
+        <div className="camera-sidebar ptosis-camera-sidebar">
+          <div className="button-row ptosis-button-row">
             {phase === "idle" ? (
               <PrimaryButton onClick={start}>測定開始</PrimaryButton>
             ) : null}
@@ -325,7 +325,7 @@ export default function PtosisAssessment() {
               </>
             ) : null}
           </div>
-          <div className="camera-metrics">
+          <div className="camera-metrics ptosis-camera-metrics">
             <div className="metric">
               <span>経過時間</span>
               <strong>{elapsed}s</strong>
