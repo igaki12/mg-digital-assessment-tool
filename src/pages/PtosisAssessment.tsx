@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
+import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
@@ -246,6 +247,18 @@ export default function PtosisAssessment() {
   }, [showOverlay]);
 
   const isRunning = phase === "waiting" || phase === "measuring";
+  const overlayTopMessage =
+    phase === "measuring"
+      ? "頭を動かさず 目だけで上を見てください"
+      : "顔を枠に合わせて そのまま待ってください";
+  const overlayPrimary =
+    phase === "measuring" ? (
+      <span className="camera-overlay-countdown">{Math.max(0, 30 - elapsed)}</span>
+    ) : (
+      <span className="camera-overlay-hint">自動で開始</span>
+    );
+  const overlaySecondary =
+    phase === "measuring" ? "30秒キープ" : "顔が入ると始まります";
 
   return (
     <Layout>
@@ -275,13 +288,14 @@ export default function PtosisAssessment() {
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
-          <div className="camera-overlay">
-            <p>
-              {phase === "measuring"
-                ? "頭を固定して目線だけ上へ"
-                : "顔を枠内に合わせると自動で開始します"}
-            </p>
-          </div>
+          <CameraOverlay
+            tone={phase === "measuring" ? "active" : "guide"}
+            topLabel={phase === "measuring" ? "眼の検査" : "位置合わせ"}
+            topMessage={overlayTopMessage}
+            centerIcons={["eye", "arrowUp"]}
+            centerPrimary={overlayPrimary}
+            centerSecondary={overlaySecondary}
+          />
         </div>
         <div className="camera-sidebar">
           <div className="button-row">

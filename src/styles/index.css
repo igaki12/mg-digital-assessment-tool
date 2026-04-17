@@ -376,13 +376,122 @@ p {
   position: absolute;
   inset: 0;
   border: 3px dashed rgba(255, 255, 255, 0.5);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  color: #ffffff;
+  padding: 0.9rem;
+}
+
+.camera-overlay-top {
+  align-self: start;
+  justify-self: stretch;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem;
+  background: rgba(7, 23, 25, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.camera-overlay-topbar {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.camera-overlay-audio,
+.camera-overlay-icon-chip {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.camera-overlay-audio svg,
+.camera-overlay-icon-chip svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.camera-overlay-toplabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(220, 255, 245, 0.92);
+}
+
+.camera-overlay-message {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  font-weight: 700;
   color: #ffffff;
-  font-weight: 600;
+}
+
+.camera-overlay-center {
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
   text-align: center;
-  padding: 1rem;
+}
+
+.camera-overlay-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.camera-overlay-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.2rem;
+  min-height: 4.2rem;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  background: rgba(7, 23, 25, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.camera-overlay-secondary {
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(7, 23, 25, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.camera-overlay-countdown {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.camera-overlay-hint {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.camera-overlay-active .camera-overlay-top,
+.camera-overlay-active .camera-overlay-primary {
+  background: rgba(9, 33, 35, 0.68);
 }
 
 .camera-metrics {

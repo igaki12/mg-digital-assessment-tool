@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
+import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
@@ -323,6 +324,31 @@ export default function PostureAssessment() {
       phase === "sideHolding",
     [phase]
   );
+  const overlayTopMessage =
+    phase === "frontHolding"
+      ? "その姿勢で 5秒間 動かずに立ってください"
+      : phase === "sideWaiting"
+        ? "横向きに立って 体の向きを整えてください"
+        : phase === "sideHolding"
+          ? "自然な姿勢で 5秒間 そのまま立ってください"
+          : "正面を向いて 足を肩幅に開いてください";
+  const overlayIcons =
+    phase === "sideWaiting" || phase === "sideHolding"
+      ? (["rotate", "body"] as const)
+      : (["body"] as const);
+  const overlayPrimary = isRunning ? (
+    <span className="camera-overlay-countdown">{countdown}</span>
+  ) : (
+    <span className="camera-overlay-hint">自動で開始</span>
+  );
+  const overlaySecondary =
+    phase === "frontHolding"
+      ? "正面をキープ"
+      : phase === "sideHolding"
+        ? "横向きをキープ"
+        : phase === "sideWaiting"
+          ? "横向きになると始まります"
+          : "正面が整うと始まります";
 
   return (
     <Layout>
@@ -354,13 +380,18 @@ export default function PostureAssessment() {
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
-          <div className="camera-overlay">
-            <p>
-              {phase === "sideWaiting" || phase === "sideHolding"
-                ? `横向きを保ってください${phase === "sideHolding" ? `（残り ${countdown}s）` : ""}`
-                : `正面を保ってください${phase === "frontHolding" ? `（残り ${countdown}s）` : ""}`}
-            </p>
-          </div>
+          <CameraOverlay
+            tone={phase === "frontHolding" || phase === "sideHolding" ? "active" : "guide"}
+            topLabel={
+              phase === "sideWaiting" || phase === "sideHolding"
+                ? "側面の姿勢"
+                : "正面の姿勢"
+            }
+            topMessage={overlayTopMessage}
+            centerIcons={[...overlayIcons]}
+            centerPrimary={overlayPrimary}
+            centerSecondary={overlaySecondary}
+          />
         </div>
         <div className="camera-sidebar">
           <div className="button-row">

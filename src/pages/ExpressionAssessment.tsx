@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
+import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
@@ -315,6 +316,26 @@ export default function ExpressionAssessment() {
       phase === "smileHolding",
     [phase]
   );
+  const overlayTopMessage =
+    phase === "smileWaiting"
+      ? "口角を上げて 歯を見せるように笑ってください"
+      : phase === "smileHolding"
+        ? "笑顔を 5秒間 そのまま保ってください"
+        : phase === "restHolding"
+          ? "自然な顔で 10秒間 そのまま見てください"
+          : "自然な顔で カメラを見てください";
+  const overlayPrimary =
+    phase === "restHolding" || phase === "smileHolding" ? (
+      <span className="camera-overlay-countdown">{countdown}</span>
+    ) : (
+      <span className="camera-overlay-hint">
+        {phase === "smileWaiting" ? "笑顔を作ると開始" : "顔が入ると開始"}
+      </span>
+    );
+  const overlaySecondary =
+    phase === "smileWaiting" || phase === "smileHolding"
+      ? "笑顔の検査"
+      : "自然な表情";
 
   return (
     <Layout>
@@ -344,13 +365,18 @@ export default function ExpressionAssessment() {
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
-          <div className="camera-overlay">
-            <p>
-              {phase === "smileWaiting" || phase === "smileHolding"
-                ? `笑顔をキープしてください${phase === "smileHolding" ? `（残り ${countdown}s）` : ""}`
-                : `自然な顔で見てください${phase === "restHolding" ? `（残り ${countdown}s）` : ""}`}
-            </p>
-          </div>
+          <CameraOverlay
+            tone={phase === "restHolding" || phase === "smileHolding" ? "active" : "guide"}
+            topLabel={
+              phase === "smileWaiting" || phase === "smileHolding"
+                ? "笑顔のタスク"
+                : "表情の検査"
+            }
+            topMessage={overlayTopMessage}
+            centerIcons={phase === "smileWaiting" || phase === "smileHolding" ? ["smile"] : ["face"]}
+            centerPrimary={overlayPrimary}
+            centerSecondary={overlaySecondary}
+          />
         </div>
         <div className="camera-sidebar">
           <div className="button-row">
