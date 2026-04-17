@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
 import { getAudio, getTimeSeries, getVideo, listSessions } from "../storage/db";
 import type { AudioRecord, SessionMeta, TimeSeriesRecord, VideoRecord } from "../types";
 
@@ -97,11 +96,10 @@ export default function Records() {
 
   return (
     <Layout>
-      <PageHeader
-        icon="records"
-        title="記録を見る"
-        description="測定履歴と簡易グラフ、動画を確認できます。"
-      />
+      <section className="page-header">
+        <h1>記録を見る</h1>
+        <p>測定履歴と簡易グラフ、動画を確認できます。</p>
+      </section>
 
       <section className="records-grid">
         <div className="card">

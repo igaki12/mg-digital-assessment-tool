@@ -1324,21 +1324,6 @@ p {
     gap: 0.8rem;
   }
 
-  .page-header-title-row {
-    gap: 0.7rem;
-  }
-
-  .page-header-icon {
-    width: 2.45rem;
-    height: 2.45rem;
-    border-radius: 0.85rem;
-  }
-
-  .page-header-icon-svg {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
   .app-nav {
     width: 100%;
     gap: 0.55rem;

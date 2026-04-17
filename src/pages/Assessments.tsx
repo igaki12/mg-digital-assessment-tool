@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
 
 const cards = [
   {
@@ -45,11 +44,10 @@ const cards = [
 export default function Assessments() {
   return (
     <Layout>
-      <PageHeader
-        icon="clipboard"
-        title="検査メニュー"
-        description="本日の状態に合わせて検査を選択してください。"
-      />
+      <section className="page-header">
+        <h1>検査メニュー</h1>
+        <p>本日の状態に合わせて検査を選択してください。</p>
+      </section>
       <section className="grid-2">
         {cards.map((card) => (
           <Link key={card.to} className="card card-link" to={card.to}>

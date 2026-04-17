@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import StatCard from "../components/StatCard";
 import {
@@ -311,11 +310,10 @@ export default function Review() {
 
   return (
     <Layout>
-      <PageHeader
-        icon="share"
-        title="医師共有"
-        description="端末内の測定データを、必要なタイミングで医師向けクラウドへ送信するダミー画面です。"
-      />
+      <section className="page-header">
+        <h1>医師共有</h1>
+        <p>端末内の測定データを、必要なタイミングで医師向けクラウドへ送信するダミー画面です。</p>
+      </section>
 
       <section className="sync-banner card">
         <p className="sync-banner-eyebrow">Demo Sync Mode</p>

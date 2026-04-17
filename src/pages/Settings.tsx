@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
-import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { clearAllData } from "../storage/db";
 import { getUserHeight, setUserHeight } from "../storage/settings";
@@ -21,11 +20,10 @@ export default function Settings() {
 
   return (
     <Layout>
-      <PageHeader
-        icon="settings"
-        title="設定"
-        description="身長設定やデータ削除を行います。"
-      />
+      <section className="page-header">
+        <h1>設定</h1>
+        <p>身長設定やデータ削除を行います。</p>
+      </section>
 
       <section className="card">
         <h2>身長設定</h2>
