@@ -19,6 +19,9 @@ const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  posture: "姿勢の検査",
+  expression: "表情の検査",
+  voice: "音声の検査",
   epro: "症状の問診"
 };
 

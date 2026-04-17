@@ -19,7 +19,7 @@ export async function getFaceLandmarker() {
           delegate: "GPU"
         },
         runningMode: "VIDEO",
-        outputFaceBlendshapes: false,
+        outputFaceBlendshapes: true,
         numFaces: 1
       });
     })();
@@ -70,4 +70,48 @@ export function extractEar(result: FaceLandmarkerResult) {
     left: computeEar(face, LEFT_EYE),
     right: computeEar(face, RIGHT_EYE)
   };
+}
+
+function getBlendshapeScore(result: FaceLandmarkerResult, name: string) {
+  const categories = result.faceBlendshapes?.[0]?.categories ?? [];
+  const category = categories.find((item) => item.categoryName === name);
+  return category?.score ?? 0;
+}
+
+export function isFaceCentered(result: FaceLandmarkerResult) {
+  const face = result.faceLandmarks?.[0];
+  if (!face) {
+    return false;
+  }
+
+  let minX = 1;
+  let maxX = 0;
+  let minY = 1;
+  let maxY = 0;
+  for (const point of face) {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  const width = maxX - minX;
+  const height = maxY - minY;
+  return (
+    width > 0.18 &&
+    height > 0.22 &&
+    minX > 0.08 &&
+    maxX < 0.92 &&
+    minY > 0.05 &&
+    maxY < 0.95
+  );
+}
+
+export function extractSmileMetrics(result: FaceLandmarkerResult) {
+  const left = getBlendshapeScore(result, "mouthSmileLeft");
+  const right = getBlendshapeScore(result, "mouthSmileRight");
+  const amplitude = (left + right) / 2;
+  const maxValue = Math.max(left, right, 0.0001);
+  const symmetry = 1 - Math.abs(left - right) / maxValue;
+  return { left, right, amplitude, symmetry };
 }

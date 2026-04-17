@@ -1,0 +1,412 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
+import Layout from "../components/Layout";
+import PrimaryButton from "../components/PrimaryButton";
+import { announcementController } from "../audio/controller";
+import { playSignalBeep } from "../audio/beep";
+import { syncOverlayCanvas } from "../mediapipe/canvas";
+import {
+  extractPostureAngles,
+  getPoseLandmarker,
+  isFrontFacingPose,
+  isFullBodyInFrame,
+  isSideFacingPose
+} from "../mediapipe/pose";
+import { addSession, addTimeSeries } from "../storage/db";
+import type { TimeSeriesEntry } from "../types";
+
+type PosturePhase =
+  | "idle"
+  | "frontWaiting"
+  | "frontHolding"
+  | "sideWaiting"
+  | "sideHolding"
+  | "completed";
+
+export default function PostureAssessment() {
+  const frameElementRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const drawingUtilsRef = useRef<DrawingUtils | null>(null);
+  const seriesRef = useRef<TimeSeriesEntry[]>([]);
+  const holdStartedAtRef = useRef<number | null>(null);
+  const readyFramesRef = useRef(0);
+  const sideCuePlayedRef = useRef(false);
+  const [phase, setPhase] = useState<PosturePhase>("idle");
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [countdown, setCountdown] = useState(5);
+  const [statusText, setStatusText] = useState(
+    "開始すると正面姿勢を検知して5秒計測し、その後に側面姿勢を計測します。"
+  );
+  const [lateralTilt, setLateralTilt] = useState(0);
+  const [trunkFlexion, setTrunkFlexion] = useState(0);
+  const [droppedHead, setDroppedHead] = useState(0);
+  const [completedSummary, setCompletedSummary] = useState<{
+    lateralTiltDeg: number;
+    trunkFlexionDeg: number;
+    droppedHeadDeg: number;
+  } | null>(null);
+
+  const stopStream = useCallback(() => {
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+    }
+    frameRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, []);
+
+  const resetMeasurement = useCallback(() => {
+    seriesRef.current = [];
+    readyFramesRef.current = 0;
+    holdStartedAtRef.current = null;
+    sideCuePlayedRef.current = false;
+    setCountdown(5);
+    setLateralTilt(0);
+    setTrunkFlexion(0);
+    setDroppedHead(0);
+    setCompletedSummary(null);
+  }, []);
+
+  const startHolding = useCallback(
+    async (nextPhase: Extract<PosturePhase, "frontHolding" | "sideHolding">) => {
+      readyFramesRef.current = 0;
+      holdStartedAtRef.current = Date.now();
+      setCountdown(5);
+      announcementController.stopCurrent();
+      await playSignalBeep();
+      setPhase(nextPhase);
+      if (nextPhase === "frontHolding") {
+        setStatusText("正面の姿勢を5秒間キープしてください。");
+        void announcementController.play("posture.frontHold");
+      } else {
+        setStatusText("そのまま横向きを5秒間キープしてください。");
+        void announcementController.play("posture.sideReady");
+      }
+    },
+    []
+  );
+
+  const finishMeasurement = useCallback(() => {
+    stopStream();
+    const frontFrames = seriesRef.current.filter(
+      (entry) =>
+        entry.lateralTiltDeg !== undefined && entry.trunkFlexionDeg === undefined
+    );
+    const sideFrames = seriesRef.current.filter(
+      (entry) => entry.trunkFlexionDeg !== undefined
+    );
+    const avg = (values: number[]) =>
+      values.length === 0
+        ? 0
+        : values.reduce((sum, value) => sum + value, 0) / values.length;
+    const summary = {
+      lateralTiltDeg: avg(frontFrames.map((entry) => entry.lateralTiltDeg ?? 0)),
+      trunkFlexionDeg: avg(
+        sideFrames.map((entry) => entry.trunkFlexionDeg ?? 0)
+      ),
+      droppedHeadDeg: avg(sideFrames.map((entry) => entry.droppedHeadDeg ?? 0))
+    };
+    setCompletedSummary(summary);
+    setPhase("completed");
+    setStatusText("姿勢検査が終了しました。保存して結果を記録できます。");
+    void announcementController.interruptAndPlay("posture.done");
+  }, [stopStream]);
+
+  const tick = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    const landmarker = await getPoseLandmarker();
+    const result = landmarker.detectForVideo(video, performance.now());
+    const postureAngles = extractPostureAngles(result);
+    const hasBody = isFullBodyInFrame(result);
+    const frontReady = hasBody && isFrontFacingPose(result);
+    const sideReady = hasBody && isSideFacingPose(result);
+    setLateralTilt(postureAngles.lateralTiltDeg);
+    setTrunkFlexion(postureAngles.trunkFlexionDeg);
+    setDroppedHead(postureAngles.droppedHeadDeg);
+
+    if (canvas && ctx && showOverlay && result.landmarks?.length) {
+      if (!drawingUtilsRef.current) {
+        drawingUtilsRef.current = new DrawingUtils(ctx);
+      }
+      syncOverlayCanvas(video, canvas, frameElementRef.current);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const drawingUtils = drawingUtilsRef.current;
+      for (const landmarks of result.landmarks) {
+        drawingUtils.drawLandmarks(landmarks, {
+          color: "rgba(102, 208, 255, 0.35)",
+          radius: 2
+        });
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "rgba(102, 208, 255, 0.5)", lineWidth: 2 }
+        );
+      }
+    } else if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (phase === "frontWaiting") {
+      if (!hasBody) {
+        readyFramesRef.current = 0;
+        setStatusText("全身が画面の枠に収まるよう、少し後ろへ下がってください。");
+        void announcementController.play("common.bodyMissing", {
+          cooldownMs: 4000
+        });
+      } else if (!frontReady) {
+        readyFramesRef.current = 0;
+        setStatusText("正面を向いて、肩と腰がまっすぐ見える位置に立ってください。");
+      } else {
+        readyFramesRef.current += 1;
+        if (readyFramesRef.current >= 8) {
+          await startHolding("frontHolding");
+        }
+      }
+    } else if (phase === "frontHolding" && holdStartedAtRef.current) {
+      const remaining = Math.max(
+        0,
+        5 - Math.floor((Date.now() - holdStartedAtRef.current) / 1000)
+      );
+      setCountdown(remaining);
+      seriesRef.current.push({
+        timestamp: Date.now(),
+        lateralTiltDeg: postureAngles.lateralTiltDeg,
+        poseStable: 1
+      });
+      if (Date.now() - holdStartedAtRef.current >= 5000) {
+        holdStartedAtRef.current = null;
+        sideCuePlayedRef.current = false;
+        setPhase("sideWaiting");
+        setStatusText("次に横向きで立ってください。");
+        void announcementController.interruptAndPlay("posture.sideTurn");
+      }
+    } else if (phase === "sideWaiting") {
+      if (!hasBody) {
+        readyFramesRef.current = 0;
+        setStatusText("全身が画面の枠に収まるよう、少し後ろへ下がってください。");
+        void announcementController.play("common.bodyMissing", {
+          cooldownMs: 4000
+        });
+      } else if (!sideReady) {
+        readyFramesRef.current = 0;
+        setStatusText("カメラに対して横向きになるよう体の向きを整えてください。");
+      } else {
+        readyFramesRef.current += 1;
+        if (readyFramesRef.current >= 8) {
+          await startHolding("sideHolding");
+        }
+      }
+    } else if (phase === "sideHolding" && holdStartedAtRef.current) {
+      const elapsedMs = Date.now() - holdStartedAtRef.current;
+      const remaining = Math.max(0, 5 - Math.floor(elapsedMs / 1000));
+      setCountdown(remaining);
+      seriesRef.current.push({
+        timestamp: Date.now(),
+        trunkFlexionDeg: postureAngles.trunkFlexionDeg,
+        droppedHeadDeg: postureAngles.droppedHeadDeg,
+        lateralTiltDeg: postureAngles.lateralTiltDeg,
+        poseStable: 1
+      });
+      if (elapsedMs >= 2400 && !sideCuePlayedRef.current) {
+        sideCuePlayedRef.current = true;
+        void announcementController.interruptAndPlay("posture.sideHold");
+      }
+      if (elapsedMs >= 5000) {
+        finishMeasurement();
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(() => {
+      void tick();
+    });
+  }, [finishMeasurement, phase, showOverlay, startHolding]);
+
+  const start = useCallback(async () => {
+    if (phase === "frontWaiting" || phase === "frontHolding" || phase === "sideWaiting" || phase === "sideHolding") {
+      return;
+    }
+    try {
+      announcementController.enableAutoplay();
+      resetMeasurement();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      setPhase("frontWaiting");
+      setStatusText("正面を向き、足を肩幅に開いて立ってください。");
+      void announcementController.interruptAndPlay("posture.frontIntro");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick();
+      });
+    } catch (error) {
+      console.warn("Unable to start posture assessment", error);
+      setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
+      setPhase("idle");
+    }
+  }, [phase, resetMeasurement, tick]);
+
+  const save = useCallback(async () => {
+    const summary = completedSummary;
+    if (!summary) {
+      return;
+    }
+    const id = Date.now();
+    const score =
+      (Math.abs(summary.lateralTiltDeg) +
+        summary.trunkFlexionDeg +
+        summary.droppedHeadDeg) /
+      3;
+    await addSession({
+      id,
+      type: "posture",
+      date: new Date().toISOString(),
+      summaryScore: Number(score.toFixed(2)),
+      notes: `前屈 ${summary.trunkFlexionDeg.toFixed(1)}° / 首下がり ${summary.droppedHeadDeg.toFixed(1)}° / 側方偏位 ${summary.lateralTiltDeg.toFixed(1)}°`
+    });
+    await addTimeSeries({
+      sessionId: id,
+      frameData: seriesRef.current,
+      details: summary
+    });
+    resetMeasurement();
+    setPhase("idle");
+    setStatusText("保存しました。再度検査することもできます。");
+  }, [completedSummary, resetMeasurement]);
+
+  const cancel = useCallback(() => {
+    stopStream();
+    announcementController.stopCurrent();
+    resetMeasurement();
+    setPhase("idle");
+    setStatusText(
+      "開始すると正面姿勢を検知して5秒計測し、その後に側面姿勢を計測します。"
+    );
+  }, [resetMeasurement, stopStream]);
+
+  useEffect(() => {
+    return () => {
+      stopStream();
+      announcementController.stopCurrent();
+    };
+  }, [stopStream]);
+
+  const isRunning = useMemo(
+    () =>
+      phase === "frontWaiting" ||
+      phase === "frontHolding" ||
+      phase === "sideWaiting" ||
+      phase === "sideHolding",
+    [phase]
+  );
+
+  return (
+    <Layout>
+      <section className="page-header">
+        <h1>姿勢検査</h1>
+        <p>
+          側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。
+        </p>
+      </section>
+
+      <section className="card phase-card">
+        <p className="phase-label">現在のフェーズ</p>
+        <div className="phase-banner">
+          <strong>
+            {phase === "idle" && "待機中"}
+            {phase === "frontWaiting" && "正面の位置合わせ"}
+            {phase === "frontHolding" && "正面を計測中"}
+            {phase === "sideWaiting" && "側面の位置合わせ"}
+            {phase === "sideHolding" && "側面を計測中"}
+            {phase === "completed" && "保存待ち"}
+          </strong>
+          <span>{statusText}</span>
+        </div>
+      </section>
+
+      <section className="camera-panel">
+        <div ref={frameElementRef} className="camera-frame">
+          <video ref={videoRef} playsInline muted className="camera-video" />
+          {showOverlay ? (
+            <canvas ref={canvasRef} className="camera-canvas" />
+          ) : null}
+          <div className="camera-overlay">
+            <p>
+              {phase === "sideWaiting" || phase === "sideHolding"
+                ? `横向きを保ってください${phase === "sideHolding" ? `（残り ${countdown}s）` : ""}`
+                : `正面を保ってください${phase === "frontHolding" ? `（残り ${countdown}s）` : ""}`}
+            </p>
+          </div>
+        </div>
+        <div className="camera-sidebar">
+          <div className="button-row">
+            {phase === "idle" ? (
+              <PrimaryButton onClick={start}>検査開始</PrimaryButton>
+            ) : null}
+            {isRunning ? (
+              <>
+                <button className="ghost-button" onClick={cancel}>
+                  中止する
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => setShowOverlay((prev) => !prev)}
+                >
+                  {showOverlay ? "推定表示をOFF" : "推定表示をON"}
+                </button>
+              </>
+            ) : null}
+            {phase === "completed" ? (
+              <>
+                <PrimaryButton onClick={save}>保存する</PrimaryButton>
+                <button className="ghost-button" onClick={start}>
+                  もう一度測定
+                </button>
+              </>
+            ) : null}
+          </div>
+
+          <div className="camera-metrics">
+            <div className="metric">
+              <span>側方偏位</span>
+              <strong>{lateralTilt.toFixed(1)}°</strong>
+            </div>
+            <div className="metric">
+              <span>体幹前屈角</span>
+              <strong>{trunkFlexion.toFixed(1)}°</strong>
+            </div>
+            <div className="metric">
+              <span>首下がり角</span>
+              <strong>{droppedHead.toFixed(1)}°</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
+}

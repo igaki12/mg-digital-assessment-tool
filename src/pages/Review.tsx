@@ -3,6 +3,7 @@ import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import StatCard from "../components/StatCard";
 import {
+  getAudio,
   deleteVideos,
   getTimeSeries,
   getVideo,
@@ -37,6 +38,9 @@ const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  posture: "姿勢の検査",
+  expression: "表情の検査",
+  voice: "音声の検査",
   epro: "症状の問診"
 };
 
@@ -134,15 +138,19 @@ export default function Review() {
       );
       const nextCandidates = await Promise.all(
         sessions.map(async (session) => {
-          const [record, video] = await Promise.all([
+          const [record, video, audio] = await Promise.all([
             getTimeSeries(session.id),
-            getVideo(session.id)
+            getVideo(session.id),
+            getAudio(session.id)
           ]);
           return {
             session,
             approxBytes:
               estimateBytes(session) +
               (record ? estimateBytes(record) : 0) +
+              (audio
+                ? audio.clips.reduce((sum, clip) => sum + clip.blob.size, 0)
+                : 0) +
               (video?.blob.size ?? 0),
             videoBytes: video?.blob.size ?? 0,
             dataPoints: record?.frameData.length ?? 0

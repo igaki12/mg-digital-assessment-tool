@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout";
-import { getTimeSeries, getVideo, listSessions } from "../storage/db";
-import type { SessionMeta, TimeSeriesRecord, VideoRecord } from "../types";
+import { getAudio, getTimeSeries, getVideo, listSessions } from "../storage/db";
+import type { AudioRecord, SessionMeta, TimeSeriesRecord, VideoRecord } from "../types";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("ja-JP", {
@@ -17,6 +17,9 @@ const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  posture: "姿勢の検査",
+  expression: "表情の検査",
+  voice: "音声の検査",
   epro: "症状の問診"
 };
 
@@ -41,6 +44,7 @@ export default function Records() {
   const [selected, setSelected] = useState<SessionMeta | null>(null);
   const [record, setRecord] = useState<TimeSeriesRecord | null>(null);
   const [video, setVideo] = useState<VideoRecord | null>(null);
+  const [audio, setAudio] = useState<AudioRecord | null>(null);
 
   useEffect(() => {
     listSessions().then((data) =>
@@ -52,10 +56,12 @@ export default function Records() {
     if (!selected) {
       setRecord(null);
       setVideo(null);
+      setAudio(null);
       return;
     }
     getTimeSeries(selected.id).then((data) => setRecord(data ?? null));
     getVideo(selected.id).then((data) => setVideo(data ?? null));
+    getAudio(selected.id).then((data) => setAudio(data ?? null));
   }, [selected]);
 
   const videoUrl = useMemo(() => {
@@ -71,6 +77,22 @@ export default function Records() {
     }
     return () => URL.revokeObjectURL(videoUrl);
   }, [videoUrl]);
+
+  const audioUrls = useMemo(() => {
+    if (!audio) {
+      return [];
+    }
+    return audio.clips.map((clip) => ({
+      ...clip,
+      url: URL.createObjectURL(clip.blob)
+    }));
+  }, [audio]);
+
+  useEffect(() => {
+    return () => {
+      audioUrls.forEach((clip) => URL.revokeObjectURL(clip.url));
+    };
+  }, [audioUrls]);
 
   return (
     <Layout>
@@ -127,6 +149,21 @@ export default function Records() {
               )}
               {videoUrl ? (
                 <video className="detail-video" src={videoUrl} controls />
+              ) : null}
+              {audioUrls.length > 0 ? (
+                <div className="voice-clip-list">
+                  {audioUrls.map((clip) => (
+                    <div key={clip.taskId} className="card voice-clip-card">
+                      <h3>{clip.label}</h3>
+                      <audio className="voice-preview" src={clip.url} controls />
+                      <p>
+                        録音時間 {clip.metrics.durationSec.toFixed(1)}s / 平均音量{" "}
+                        {clip.metrics.meanRms.toFixed(3)} / 平均ピッチ{" "}
+                        {clip.metrics.pitchMeanHz.toFixed(1)}Hz
+                      </p>
+                    </div>
+                  ))}
+                </div>
               ) : null}
             </div>
           )}

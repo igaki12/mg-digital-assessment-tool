@@ -1,12 +1,22 @@
 import { useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 
-type AssessmentType = "ptosis" | "limbs" | "gait" | "epro";
+type AssessmentType =
+  | "ptosis"
+  | "limbs"
+  | "gait"
+  | "posture"
+  | "expression"
+  | "voice"
+  | "epro";
 
 const typeLabels: Record<AssessmentType, string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  posture: "姿勢の検査",
+  expression: "表情の検査",
+  voice: "音声の検査",
   epro: "症状の問診"
 };
 
@@ -52,6 +62,36 @@ const assessmentSpotlights: Record<
     accent: "linear-gradient(135deg, #124a78 0%, #1f7ec8 46%, #95d5ff 100%)",
     to: "/gait"
   },
+  posture: {
+    title: "姿勢の検査",
+    tagline: "正面と側面から、体幹の傾きと首下がりを短時間で確認します。",
+    description:
+      "正面では側方偏位、側面では体幹前屈角と首下がり角をそれぞれ5秒ずつ計測します。条件が整うとすぐに測定へ入り、日ごとの変化を見やすく残します。",
+    tools: ["Pose Landmarker", "正面/側面ガイド", "背面カメラ"],
+    checks: ["側方偏位", "体幹前屈角", "首下がり角"],
+    accent: "linear-gradient(135deg, #7b5313 0%, #c58a1c 48%, #f4d07c 100%)",
+    to: "/posture"
+  },
+  expression: {
+    title: "表情の検査",
+    tagline: "自然表情と笑顔を比べて、まばたきと表情変化を確認します。",
+    description:
+      "自然な顔のまま10秒、続いて笑顔を5秒記録し、瞬目の回数や笑顔の左右差を見ます。仮面様顔貌の傾向を簡易に把握できるようにします。",
+    tools: ["Face Landmarker", "Blendshape", "フロントカメラ"],
+    checks: ["瞬目回数", "笑顔強度", "左右対称性"],
+    accent: "linear-gradient(135deg, #6a3658 0%, #c35b9c 48%, #f1b5d8 100%)",
+    to: "/expression"
+  },
+  voice: {
+    title: "音声の検査",
+    tagline: "3つの発話タスクで、声量とピッチの変化を記録します。",
+    description:
+      "持続母音、数字カウント、定型文音読を順に録音し、音量やピッチの基本指標を残します。案内音声を待たずに録音へ進めるので、テンポよく計測できます。",
+    tools: ["マイク録音", "Web Audio解析", "音声ガイド"],
+    checks: ["録音時間", "平均音量", "平均ピッチ"],
+    accent: "linear-gradient(135deg, #254a7b 0%, #4f78c5 48%, #a9c3ff 100%)",
+    to: "/voice"
+  },
   epro: {
     title: "症状の問診",
     tagline: "日常生活への影響を、患者さんの言葉で残します。",
@@ -69,7 +109,7 @@ type AssessmentGuideSpotlightProps = {
 };
 
 export default function AssessmentGuideSpotlight({
-  defaultSelected = "gait"
+  defaultSelected = "posture"
 }: AssessmentGuideSpotlightProps) {
   const [selectedSpotlight, setSelectedSpotlight] =
     useState<AssessmentType>(defaultSelected);

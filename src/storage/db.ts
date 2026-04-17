@@ -1,8 +1,13 @@
 import { openDB } from "idb";
-import type { SessionMeta, TimeSeriesRecord, VideoRecord } from "../types";
+import type {
+  AudioRecord,
+  SessionMeta,
+  TimeSeriesRecord,
+  VideoRecord
+} from "../types";
 
 const DB_NAME = "MG_Assessment_DB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
   upgrade(db) {
@@ -14,6 +19,10 @@ const dbPromise = openDB(DB_NAME, DB_VERSION, {
     }
     if (!db.objectStoreNames.contains("videos")) {
       const store = db.createObjectStore("videos", { keyPath: "sessionId" });
+      store.createIndex("createdAt", "createdAt");
+    }
+    if (!db.objectStoreNames.contains("audios")) {
+      const store = db.createObjectStore("audios", { keyPath: "sessionId" });
       store.createIndex("createdAt", "createdAt");
     }
   }
@@ -52,6 +61,28 @@ export async function getVideo(sessionId: number) {
   return (await db.get("videos", sessionId)) as VideoRecord | undefined;
 }
 
+export async function addAudio(record: AudioRecord) {
+  const db = await dbPromise;
+  await db.put("audios", record);
+}
+
+export async function getAudio(sessionId: number) {
+  const db = await dbPromise;
+  return (await db.get("audios", sessionId)) as AudioRecord | undefined;
+}
+
+export async function deleteAudios(sessionIds: number[]) {
+  if (sessionIds.length === 0) {
+    return;
+  }
+  const db = await dbPromise;
+  const tx = db.transaction("audios", "readwrite");
+  for (const sessionId of sessionIds) {
+    await tx.store.delete(sessionId);
+  }
+  await tx.done;
+}
+
 export async function deleteVideos(sessionIds: number[]) {
   if (sessionIds.length === 0) {
     return;
@@ -84,9 +115,13 @@ export async function pruneVideos(limit: number) {
 
 export async function clearAllData() {
   const db = await dbPromise;
-  const tx = db.transaction(["sessions", "time_series_data", "videos"], "readwrite");
+  const tx = db.transaction(
+    ["sessions", "time_series_data", "videos", "audios"],
+    "readwrite"
+  );
   await tx.objectStore("sessions").clear();
   await tx.objectStore("time_series_data").clear();
   await tx.objectStore("videos").clear();
+  await tx.objectStore("audios").clear();
   await tx.done;
 }

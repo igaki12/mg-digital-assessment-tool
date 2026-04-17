@@ -1,4 +1,11 @@
-export type AssessmentType = "ptosis" | "limbs" | "gait" | "epro";
+export type AssessmentType =
+  | "ptosis"
+  | "limbs"
+  | "gait"
+  | "posture"
+  | "expression"
+  | "voice"
+  | "epro";
 
 export type SessionMeta = {
   id: number;
@@ -17,6 +24,17 @@ export type TimeSeriesEntry = {
   kneeLeftDeg?: number;
   kneeRightDeg?: number;
   gaitSpeed?: number;
+  trunkFlexionDeg?: number;
+  droppedHeadDeg?: number;
+  lateralTiltDeg?: number;
+  poseStable?: number;
+  blinkCount?: number;
+  blinkRatePerMin?: number;
+  smileLeft?: number;
+  smileRight?: number;
+  smileSymmetry?: number;
+  voiceRms?: number;
+  voicePitchHz?: number;
 };
 
 export type TimeSeriesRecord = {
@@ -29,4 +47,28 @@ export type VideoRecord = {
   sessionId: number;
   blob: Blob;
   createdAt: number;
+};
+
+export type AudioClipMetrics = {
+  durationSec: number;
+  meanRms: number;
+  peakRms: number;
+  pitchMeanHz: number;
+  pitchStdHz: number;
+  voicedFrameRatio: number;
+};
+
+export type AudioClip = {
+  taskId: string;
+  label: string;
+  blob: Blob;
+  mimeType: string;
+  durationSec: number;
+  metrics: AudioClipMetrics;
+};
+
+export type AudioRecord = {
+  sessionId: number;
+  createdAt: number;
+  clips: AudioClip[];
 };

@@ -136,3 +136,132 @@ export function estimateBodyHeightPixels(result: PoseLandmarkerResult) {
   };
   return Math.hypot(nose.x - ankle.x, nose.y - ankle.y);
 }
+
+function hasReliablePoint(
+  point: { x: number; y: number; visibility?: number } | undefined
+) {
+  return Boolean(
+    point &&
+      point.x > 0.02 &&
+      point.x < 0.98 &&
+      point.y > 0.02 &&
+      point.y < 0.98 &&
+      (point.visibility ?? 1) > 0.35
+  );
+}
+
+function getPose(result: PoseLandmarkerResult) {
+  return result.landmarks?.[0] ?? null;
+}
+
+function averagePoint(
+  a:
+    | { x: number; y: number; visibility?: number }
+    | undefined,
+  b:
+    | { x: number; y: number; visibility?: number }
+    | undefined
+) {
+  if (!a || !b) {
+    return null;
+  }
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2
+  };
+}
+
+export function isFullBodyInFrame(result: PoseLandmarkerResult) {
+  const pose = getPose(result);
+  if (!pose) {
+    return false;
+  }
+  const points = [pose[0], pose[11], pose[12], pose[23], pose[24], pose[27], pose[28]];
+  return points.every((point) => hasReliablePoint(point));
+}
+
+export function isFrontFacingPose(result: PoseLandmarkerResult) {
+  const pose = getPose(result);
+  const bodyHeight = estimateBodyHeightPixels(result);
+  if (!pose || !bodyHeight) {
+    return false;
+  }
+  const leftShoulder = pose[11];
+  const rightShoulder = pose[12];
+  const leftHip = pose[23];
+  const rightHip = pose[24];
+  if (
+    !hasReliablePoint(leftShoulder) ||
+    !hasReliablePoint(rightShoulder) ||
+    !hasReliablePoint(leftHip) ||
+    !hasReliablePoint(rightHip)
+  ) {
+    return false;
+  }
+
+  const shoulderSpan = Math.abs(leftShoulder!.x - rightShoulder!.x);
+  const hipSpan = Math.abs(leftHip!.x - rightHip!.x);
+  return shoulderSpan / bodyHeight > 0.12 && hipSpan / bodyHeight > 0.08;
+}
+
+export function isSideFacingPose(result: PoseLandmarkerResult) {
+  const pose = getPose(result);
+  const bodyHeight = estimateBodyHeightPixels(result);
+  if (!pose || !bodyHeight) {
+    return false;
+  }
+  const leftShoulder = pose[11];
+  const rightShoulder = pose[12];
+  const leftHip = pose[23];
+  const rightHip = pose[24];
+  if (
+    !hasReliablePoint(leftShoulder) ||
+    !hasReliablePoint(rightShoulder) ||
+    !hasReliablePoint(leftHip) ||
+    !hasReliablePoint(rightHip)
+  ) {
+    return false;
+  }
+  const shoulderSpan = Math.abs(leftShoulder!.x - rightShoulder!.x);
+  const hipSpan = Math.abs(leftHip!.x - rightHip!.x);
+  return shoulderSpan / bodyHeight < 0.1 && hipSpan / bodyHeight < 0.08;
+}
+
+export function extractPostureAngles(result: PoseLandmarkerResult) {
+  const pose = getPose(result);
+  if (!pose) {
+    return {
+      trunkFlexionDeg: 0,
+      droppedHeadDeg: 0,
+      lateralTiltDeg: 0
+    };
+  }
+
+  const shoulderCenter = averagePoint(pose[11], pose[12]);
+  const hipCenter = averagePoint(pose[23], pose[24]);
+  const earCenter = averagePoint(pose[7], pose[8]);
+  if (!shoulderCenter || !hipCenter || !earCenter) {
+    return {
+      trunkFlexionDeg: 0,
+      droppedHeadDeg: 0,
+      lateralTiltDeg: 0
+    };
+  }
+
+  const trunkVector = {
+    x: shoulderCenter.x - hipCenter.x,
+    y: shoulderCenter.y - hipCenter.y
+  };
+  const verticalAngle =
+    (Math.atan2(Math.abs(trunkVector.x), Math.abs(trunkVector.y)) * 180) / Math.PI;
+  const headVector = {
+    x: earCenter.x - shoulderCenter.x,
+    y: earCenter.y - shoulderCenter.y
+  };
+
+  return {
+    trunkFlexionDeg: verticalAngle,
+    droppedHeadDeg: angleBetween(headVector, trunkVector),
+    lateralTiltDeg: verticalAngle
+  };
+}

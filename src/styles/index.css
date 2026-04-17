@@ -588,6 +588,89 @@ p {
   color: var(--accent);
 }
 
+.phase-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.phase-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.phase-banner {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eef8f5 0%, #e1f1ed 100%);
+  border: 1px solid var(--border);
+}
+
+.phase-banner strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.voice-task-stack {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.voice-task-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid rgba(199, 227, 221, 0.8);
+}
+
+.voice-task-card.active {
+  border-color: rgba(29, 111, 106, 0.5);
+  box-shadow: 0 16px 32px rgba(16, 42, 43, 0.12);
+}
+
+.voice-task-card.done {
+  background: linear-gradient(135deg, #ffffff 0%, #f3faf7 100%);
+}
+
+.voice-task-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.voice-task-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.voice-preview {
+  width: 100%;
+}
+
+.voice-metrics-grid,
+.voice-clip-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.voice-clip-card {
+  padding: 1rem;
+}
+
 .sync-banner {
   background:
     linear-gradient(135deg, rgba(14, 44, 46, 0.96) 0%, rgba(29, 111, 106, 0.92) 56%, rgba(44, 156, 154, 0.88) 100%);
