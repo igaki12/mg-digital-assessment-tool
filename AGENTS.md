@@ -1,3 +1,4 @@
+<<<<<<< ours
 # AGENTS.md - MG Digital Assessment Tool (Project Draft)
 
 ## 1. プロジェクト概要
@@ -997,3 +998,23 @@ Pose Landmarker（完全版）	ポーズ検出器: 224 x 224 x 3
 *   **眼瞼下垂:** MediaPipe FaceMeshでまぶたの距離を測定するロジックを採用。
 *   **ウェアラブル代替:** パッシブで筋疲労を計測していたPAMSysセンサーの機能を、 監視カメラのような形でビデオベースの解析（歩行・姿勢）で代替する設計。
 *   **ePRO:** 重症筋無力症の MG-ADL/MG-QOL15rをそのままデジタル化。
+=======
+# AGENTS.md
+
+このリポジトリでは、`AGENTS.md` はエージェント向けの作業ガイドとして使う。
+
+## 参照順
+
+1. [PRODUCT_REQUIREMENTS_MG_PD.md](./PRODUCT_REQUIREMENTS_MG_PD.md)
+2. [PRODUCT_DRAFT_LEGACY_MG.md](./PRODUCT_DRAFT_LEGACY_MG.md)
+3. [PD_POSTURE_UX_NOTES.md](./PD_POSTURE_UX_NOTES.md)
+
+## 作業ルール
+
+- 現行実装は MG 中心のプロトタイプとして扱う
+- PD 対応は段階追加とし、未実装機能を「実装済み」とは書かない
+- 単眼カメラでの絶対精度を過剰に約束しない
+- 本アプリは診断補助ではなく経時比較支援を目的とする
+- 認証、同意、クラウド保存はバックエンド前提の別フェーズとして扱う
+- 要件書を更新するときは、現行実装 / 次期機能 / 研究課題を混在させない
+>>>>>>> theirs
