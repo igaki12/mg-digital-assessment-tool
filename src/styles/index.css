@@ -113,29 +113,6 @@ p {
   border-color: var(--border);
 }
 
-.nav-link-content {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.nav-link-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.nav-icon {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
-.app-nav-mobile-hint {
-  display: none;
-}
-
 .app-main {
   flex: 1;
   padding: 2rem 5vw 4rem;
@@ -250,34 +227,6 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-}
-
-.page-header-with-icon {
-  gap: 0.8rem;
-}
-
-.page-header-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  min-width: 0;
-}
-
-.page-header-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.8rem;
-  height: 2.8rem;
-  border-radius: 0.95rem;
-  background: rgba(13, 81, 94, 0.08);
-  color: var(--accent-strong);
-  flex-shrink: 0;
-}
-
-.page-header-icon-svg {
-  width: 1.45rem;
-  height: 1.45rem;
 }
 
 .primary-button {
@@ -1327,85 +1276,14 @@ p {
   .app-nav {
     width: 100%;
     gap: 0.55rem;
-    padding: 0.55rem;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(199, 227, 221, 0.9);
-    box-shadow: 0 16px 30px rgba(16, 42, 43, 0.08);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    cursor: pointer;
-  }
-
-  .app-nav-mobile-hint {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 0.15rem 0.15rem;
-  }
-
-  .app-nav-mobile-text {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .app-nav-chevron {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.9rem;
-    height: 1.9rem;
-    border-radius: 999px;
-    background: rgba(29, 111, 106, 0.08);
-    color: var(--accent);
-  }
-
-  .app-nav-chevron .nav-icon {
-    transition: transform 180ms ease;
-  }
-
-  .app-nav-chevron .nav-icon.is-expanded {
-    transform: rotate(180deg);
   }
 
   .nav-link {
-    flex: 0 0 auto;
-    width: 3rem;
-    min-width: 3rem;
-    padding: 0.65rem;
-    justify-content: center;
+    flex: 1 1 calc(50% - 0.3rem);
+    text-align: center;
+    padding: 0.7rem 0.9rem;
     border-color: rgba(199, 227, 221, 0.95);
     background: rgba(255, 255, 255, 0.92);
-  }
-
-  .nav-link-content {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .nav-link-label {
-    display: none;
-  }
-
-  .app-nav.is-expanded .nav-link {
-    width: auto;
-    min-width: calc(50% - 0.3rem);
-    padding: 0.7rem 0.9rem;
-  }
-
-  .app-nav.is-expanded .nav-link-content {
-    justify-content: flex-start;
-  }
-
-  .app-nav.is-expanded .nav-link-label {
-    display: inline;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: inherit;
   }
 
   .question-row {
