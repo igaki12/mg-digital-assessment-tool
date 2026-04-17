@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
 import { playSignalBeep } from "../audio/beep";
@@ -339,10 +340,11 @@ export default function ExpressionAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>表情検査</h1>
-        <p>仮面様顔貌と瞬目の傾向を見るために、自然表情10秒と笑顔5秒を順に記録します。</p>
-      </section>
+      <PageHeader
+        icon="face"
+        title="表情検査"
+        description="仮面様顔貌と瞬目の傾向を見るために、自然表情10秒と笑顔5秒を順に記録します。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

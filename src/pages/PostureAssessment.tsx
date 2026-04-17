@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
 import { playSignalBeep } from "../audio/beep";
@@ -352,12 +353,11 @@ export default function PostureAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>姿勢検査</h1>
-        <p>
-          側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。
-        </p>
-      </section>
+      <PageHeader
+        icon="body"
+        title="姿勢検査"
+        description="側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

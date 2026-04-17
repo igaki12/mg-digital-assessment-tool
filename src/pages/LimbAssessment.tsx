@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { syncOverlayCanvas } from "../mediapipe/canvas";
 import { addSession, addTimeSeries } from "../storage/db";
@@ -148,10 +149,11 @@ export default function LimbAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>上肢挙上テスト</h1>
-        <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
-      </section>
+      <PageHeader
+        icon="arm"
+        title="上肢挙上テスト"
+        description="両腕を肩の高さまで上げ、そのまま枠内でキープしてください。"
+      />
       <section className="camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />

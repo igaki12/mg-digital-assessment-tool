@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
 import { playSignalBeep } from "../audio/beep";
@@ -262,12 +263,11 @@ export default function PtosisAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>眼瞼下垂テスト</h1>
-        <p>
-          頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で30秒の計測が始まります。
-        </p>
-      </section>
+      <PageHeader
+        icon="eye"
+        title="眼瞼下垂テスト"
+        description="頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で30秒の計測が始まります。"
+      />
 
       <section className="card phase-card ptosis-phase-card">
         <p className="phase-label">現在のフェーズ</p>

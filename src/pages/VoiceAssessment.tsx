@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { analyzeVoiceBlob } from "../audio/voiceAnalysis";
 import { announcementController } from "../audio/controller";
@@ -263,10 +264,11 @@ export default function VoiceAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>音声検査</h1>
-        <p>構音障害や発声変化を見るために、持続母音、数字カウント、定型文音読を順に録音します。</p>
-      </section>
+      <PageHeader
+        icon="audio"
+        title="音声検査"
+        description="構音障害や発声変化を見るために、持続母音、数字カウント、定型文音読を順に録音します。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

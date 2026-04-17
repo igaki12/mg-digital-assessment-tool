@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { addSession, addTimeSeries, addVideo } from "../storage/db";
 import { syncOverlayCanvas } from "../mediapipe/canvas";
@@ -203,10 +204,11 @@ export default function GaitAssessment() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>歩行監視モード</h1>
-        <p>カメラの前に立つと録画が始まります。いつも通り歩いてください。</p>
-      </section>
+      <PageHeader
+        icon="walk"
+        title="歩行監視モード"
+        description="カメラの前に立つと録画が始まります。いつも通り歩いてください。"
+      />
       <section className="camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />

@@ -1,22 +1,57 @@
-import { Link, NavLink } from "react-router-dom";
-import type { ReactNode } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import AppIcon from "./AppIcon";
 
-const navItems = [
-  { to: "/", label: "ホーム" },
-  { to: "/assessments", label: "検査を始める" },
-  { to: "/records", label: "記録を見る" },
-  { to: "/review", label: "医師共有" },
-  { to: "/settings", label: "設定" }
+type NavIconName =
+  | "home"
+  | "clipboard"
+  | "records"
+  | "share"
+  | "settings"
+  | "chevron";
+
+type NavItem = {
+  to: string;
+  label: string;
+  icon: Exclude<NavIconName, "chevron">;
+};
+
+const navItems: NavItem[] = [
+  { to: "/", label: "ホーム", icon: "home" },
+  { to: "/assessments", label: "検査を始める", icon: "clipboard" },
+  { to: "/records", label: "記録を見る", icon: "records" },
+  { to: "/review", label: "医師共有", icon: "share" },
+  { to: "/settings", label: "設定", icon: "settings" }
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const [isMobileNavExpanded, setIsMobileNavExpanded] = useState(false);
+
+  useEffect(() => {
+    setIsMobileNavExpanded(false);
+  }, [location.pathname]);
+
   return (
     <div className="app">
       <header className="app-header">
         <Link to="/" className="logo">
           MG Digital Assessment
         </Link>
-        <nav className="app-nav">
+        <nav
+          className={`app-nav${isMobileNavExpanded ? " is-expanded" : ""}`}
+          onClick={() => setIsMobileNavExpanded((prev) => !prev)}
+          aria-label="メインナビゲーション"
+        >
+          <div className="app-nav-mobile-hint" aria-hidden="true">
+            <span className="app-nav-mobile-text">メニュー</span>
+            <span className="app-nav-chevron">
+              <AppIcon
+                name="chevron"
+                className={`nav-icon${isMobileNavExpanded ? " is-expanded" : ""}`}
+              />
+            </span>
+          </div>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -24,8 +59,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
               }
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
             >
-              {item.label}
+              <span className="nav-link-content">
+                <span className="nav-link-icon">
+                  <AppIcon name={item.icon} className="nav-icon" />
+                </span>
+                <span className="nav-link-label">{item.label}</span>
+              </span>
             </NavLink>
           ))}
         </nav>

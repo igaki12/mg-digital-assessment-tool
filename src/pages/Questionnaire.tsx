@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import { mgAdlItems, mgQolItems } from "../data/questionnaires";
 import { addSession, addTimeSeries } from "../storage/db";
@@ -43,10 +44,11 @@ export default function Questionnaire() {
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>問診票（MG-ADL / MG-QOL15r）</h1>
-        <p>最近の症状を思い出しながら、該当するスコアを選択してください。</p>
-      </section>
+      <PageHeader
+        icon="questionnaire"
+        title="問診票（MG-ADL / MG-QOL15r）"
+        description="最近の症状を思い出しながら、該当するスコアを選択してください。"
+      />
       <section className="questionnaire">
         <div className="card">
           <h2>MG-ADL 相当 (0-3点)</h2>
