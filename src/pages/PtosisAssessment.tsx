@@ -271,8 +271,6 @@ export default function PtosisAssessment() {
     ) : (
       <span className="camera-overlay-hint">自動で開始</span>
     );
-  const overlaySecondary =
-    phase === "measuring" ? "30秒キープ" : "顔が入ると始まります";
   const showIntroHeader = phase === "idle";
 
   return (
@@ -309,9 +307,7 @@ export default function PtosisAssessment() {
             tone={phase === "measuring" ? "active" : "guide"}
             topLabel={phase === "measuring" ? "眼の検査" : "位置合わせ"}
             topMessage={overlayTopMessage}
-            centerIcons={["eye", "arrowUp"]}
             centerPrimary={overlayPrimary}
-            centerSecondary={overlaySecondary}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
