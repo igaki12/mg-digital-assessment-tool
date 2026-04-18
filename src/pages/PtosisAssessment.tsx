@@ -23,6 +23,8 @@ export default function PtosisAssessment() {
   const readyFramesRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const progressCueRef = useRef({ ten: false, twenty: false });
+  const phaseRef = useRef<PtosisPhase>("idle");
+  const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<PtosisPhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
   const [earLeft, setEarLeft] = useState(0);
@@ -56,15 +58,20 @@ export default function PtosisAssessment() {
     setEarRight(0);
   }, []);
 
+  const updatePhase = useCallback((nextPhase: PtosisPhase) => {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }, []);
+
   const beginMeasurement = useCallback(async () => {
     announcementController.stopCurrent();
     await playSignalBeep();
     startTimeRef.current = Date.now();
     progressCueRef.current = { ten: false, twenty: false };
     setElapsed(0);
-    setPhase("measuring");
+    updatePhase("measuring");
     setStatusText("良い位置です。30秒間、そのまま上を見てください。");
-  }, []);
+  }, [updatePhase]);
 
   const tick = useCallback(async () => {
     const video = videoRef.current;
@@ -81,7 +88,7 @@ export default function PtosisAssessment() {
     setEarLeft(ear.left);
     setEarRight(ear.right);
 
-    if (canvas && ctx && showOverlay && result.faceLandmarks?.length) {
+    if (canvas && ctx && showOverlayRef.current && result.faceLandmarks?.length) {
       if (!drawingUtilsRef.current) {
         drawingUtilsRef.current = new DrawingUtils(ctx);
       }
@@ -109,7 +116,9 @@ export default function PtosisAssessment() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    if (phase === "waiting") {
+    const currentPhase = phaseRef.current;
+
+    if (currentPhase === "waiting") {
       if (!faceReady) {
         readyFramesRef.current = 0;
         setStatusText("スマートフォンを、顔の正面に置いてください。");
@@ -123,7 +132,7 @@ export default function PtosisAssessment() {
           await beginMeasurement();
         }
       }
-    } else if (phase === "measuring" && startTimeRef.current) {
+    } else if (currentPhase === "measuring" && startTimeRef.current) {
       const timestamp = Date.now();
       const seconds = Math.floor((timestamp - startTimeRef.current) / 1000);
       setElapsed(seconds);
@@ -143,7 +152,7 @@ export default function PtosisAssessment() {
       }
       if (seconds >= 30) {
         stopStream();
-        setPhase("completed");
+        updatePhase("completed");
         setStatusText("終了です。保存して結果を記録できます。");
         void announcementController.interruptAndPlay("ptosis.done");
       }
@@ -152,10 +161,10 @@ export default function PtosisAssessment() {
     frameRef.current = requestAnimationFrame(() => {
       void tick();
     });
-  }, [beginMeasurement, phase, showOverlay, stopStream]);
+  }, [beginMeasurement, stopStream, updatePhase]);
 
   const start = useCallback(async () => {
-    if (phase === "waiting" || phase === "measuring") {
+    if (phaseRef.current === "waiting" || phaseRef.current === "measuring") {
       return;
     }
     try {
@@ -177,7 +186,7 @@ export default function PtosisAssessment() {
           );
         }
       }
-      setPhase("waiting");
+      updatePhase("waiting");
       setStatusText("頭を動かさずに、顔を枠に合わせてください。");
       void announcementController.interruptAndPlay("ptosis.intro");
       frameRef.current = requestAnimationFrame(() => {
@@ -186,16 +195,16 @@ export default function PtosisAssessment() {
     } catch (error) {
       console.warn("Unable to start ptosis assessment", error);
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
-      setPhase("idle");
+      updatePhase("idle");
     }
-  }, [phase, resetMeasurement, tick]);
+  }, [resetMeasurement, tick, updatePhase]);
 
   const save = useCallback(async () => {
     stopStream();
     announcementController.stopCurrent();
     const data = seriesRef.current;
     if (!data.length) {
-      setPhase("idle");
+      updatePhase("idle");
       setStatusText("開始すると音声案内に合わせて顔位置を確認します。");
       return;
     }
@@ -220,18 +229,18 @@ export default function PtosisAssessment() {
         durationSec: elapsed
       }
     });
-    setPhase("idle");
+    updatePhase("idle");
     setStatusText("保存しました。再度検査することもできます。");
     resetMeasurement();
-  }, [elapsed, resetMeasurement, stopStream]);
+  }, [elapsed, resetMeasurement, stopStream, updatePhase]);
 
   const cancel = useCallback(() => {
     stopStream();
     announcementController.stopCurrent();
     resetMeasurement();
-    setPhase("idle");
+    updatePhase("idle");
     setStatusText("開始すると音声案内に合わせて顔位置を確認します。");
-  }, [resetMeasurement, stopStream]);
+  }, [resetMeasurement, stopStream, updatePhase]);
 
   useEffect(() => {
     return () => {
@@ -241,6 +250,11 @@ export default function PtosisAssessment() {
   }, [stopStream]);
 
   useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    showOverlayRef.current = showOverlay;
     if (!showOverlay) {
       drawingUtilsRef.current = null;
     }
