@@ -352,7 +352,6 @@ export default function PtosisAssessment() {
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
           <div className="ptosis-phase-overlay">
-            <p className="phase-label">現在のフェーズ</p>
             <div className="phase-banner">
               <strong>{phaseTitle}</strong>
               <span>{statusText}</span>
