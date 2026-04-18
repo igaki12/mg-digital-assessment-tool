@@ -259,15 +259,18 @@ export default function PtosisAssessment() {
     );
   const overlaySecondary =
     phase === "measuring" ? "30秒キープ" : "顔が入ると始まります";
+  const showIntroHeader = phase === "idle";
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>眼瞼下垂テスト</h1>
-        <p>
-          頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で30秒の計測が始まります。
-        </p>
-      </section>
+      {showIntroHeader ? (
+        <section className="page-header">
+          <h1>眼瞼下垂テスト</h1>
+          <p>
+            頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で30秒の計測が始まります。
+          </p>
+        </section>
+      ) : null}
 
       <section className="card phase-card ptosis-phase-card">
         <p className="phase-label">現在のフェーズ</p>
