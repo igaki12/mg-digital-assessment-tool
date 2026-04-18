@@ -23,6 +23,7 @@ export default function PtosisAssessment() {
   const readyFramesRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const progressCueRef = useRef({ ten: false, twenty: false });
+  const runIdRef = useRef(0);
   const phaseRef = useRef<PtosisPhase>("idle");
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<PtosisPhase>("idle");
@@ -35,12 +36,17 @@ export default function PtosisAssessment() {
   );
 
   const stopStream = useCallback(() => {
+    runIdRef.current += 1;
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
     }
     frameRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (canvas && ctx) {
@@ -73,16 +79,58 @@ export default function PtosisAssessment() {
     setStatusText("良い位置です。30秒間、そのまま上を見てください。");
   }, [updatePhase]);
 
-  const tick = useCallback(async () => {
+  const tick = useCallback(async (runId: number) => {
+    if (runId !== runIdRef.current) {
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) {
       return;
     }
+
+    const stream = streamRef.current;
+    if (!stream?.active) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     const landmarker = await getFaceLandmarker();
+    if (runId !== runIdRef.current) {
+      return;
+    }
+
+    if (
+      video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+      video.videoWidth === 0 ||
+      video.videoHeight === 0
+    ) {
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+      return;
+    }
+
     const now = performance.now();
-    const result = landmarker.detectForVideo(video, now);
+    let result;
+    try {
+      result = landmarker.detectForVideo(video, now);
+    } catch (error) {
+      if (runId !== runIdRef.current) {
+        return;
+      }
+      console.warn("Skipping ptosis frame because the video is not ready", error);
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+      return;
+    }
+
+    if (runId !== runIdRef.current) {
+      return;
+    }
+
     const ear = extractEar(result);
     const faceReady = isFaceCentered(result);
     setEarLeft(ear.left);
@@ -130,6 +178,9 @@ export default function PtosisAssessment() {
         if (readyFramesRef.current >= 6) {
           readyFramesRef.current = 0;
           await beginMeasurement();
+          if (runId !== runIdRef.current) {
+            return;
+          }
         }
       }
     } else if (currentPhase === "measuring" && startTimeRef.current) {
@@ -158,8 +209,12 @@ export default function PtosisAssessment() {
       }
     }
 
+    if (runId !== runIdRef.current || !streamRef.current?.active) {
+      return;
+    }
+
     frameRef.current = requestAnimationFrame(() => {
-      void tick();
+      void tick(runId);
     });
   }, [beginMeasurement, stopStream, updatePhase]);
 
@@ -174,6 +229,8 @@ export default function PtosisAssessment() {
         video: { facingMode: "user" },
         audio: false
       });
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -190,7 +247,7 @@ export default function PtosisAssessment() {
       setStatusText("頭を動かさずに、顔を枠に合わせてください。");
       void announcementController.interruptAndPlay("ptosis.intro");
       frameRef.current = requestAnimationFrame(() => {
-        void tick();
+        void tick(runId);
       });
     } catch (error) {
       console.warn("Unable to start ptosis assessment", error);
