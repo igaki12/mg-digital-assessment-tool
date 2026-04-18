@@ -325,6 +325,14 @@ export default function PtosisAssessment() {
       <span className="camera-overlay-hint">自動で開始</span>
     );
   const showIntroHeader = phase === "idle";
+  const phaseTitle =
+    phase === "idle"
+      ? "待機中"
+      : phase === "waiting"
+        ? "位置合わせ"
+        : phase === "measuring"
+          ? "計測中"
+          : "保存待ち";
 
   return (
     <Layout>
@@ -337,27 +345,22 @@ export default function PtosisAssessment() {
         </section>
       ) : null}
 
-      <section className="card phase-card ptosis-phase-card">
-        <p className="phase-label">現在のフェーズ</p>
-        <div className="phase-banner">
-          <strong>
-            {phase === "idle" && "待機中"}
-            {phase === "waiting" && "位置合わせ"}
-            {phase === "measuring" && "計測中"}
-            {phase === "completed" && "保存待ち"}
-          </strong>
-          <span>{statusText}</span>
-        </div>
-      </section>
-
       <section className="camera-panel ptosis-camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
+          <div className="ptosis-phase-overlay">
+            <p className="phase-label">現在のフェーズ</p>
+            <div className="phase-banner">
+              <strong>{phaseTitle}</strong>
+              <span>{statusText}</span>
+            </div>
+          </div>
           <CameraOverlay
             tone={phase === "measuring" ? "active" : "guide"}
+            topLabel=""
             centerPrimary={overlayPrimary}
           />
         </div>
