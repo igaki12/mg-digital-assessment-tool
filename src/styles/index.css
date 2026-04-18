@@ -71,10 +71,18 @@ p {
 }
 
 .logo {
+  display: block;
   font-weight: 700;
   text-decoration: none;
   color: var(--accent);
   font-size: 1.1rem;
+}
+
+.app-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .app-nav {
@@ -82,6 +90,10 @@ p {
   gap: 0.8rem;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.app-nav-toggle {
+  display: none;
 }
 
 .nav-link {
@@ -1269,13 +1281,76 @@ p {
 @media (max-width: 720px) {
   .app-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.8rem;
+    align-items: stretch;
+    gap: 0.45rem;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .app-header-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .logo {
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.05rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .logo::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-nav-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.24rem;
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
+    border: 1px solid rgba(199, 227, 221, 0.95);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--accent);
+    box-shadow: 0 10px 18px rgba(16, 42, 43, 0.08);
+    cursor: pointer;
+  }
+
+  .app-nav-toggle-line {
+    width: 1rem;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+
+  .app-header.is-mobile-open .app-nav-toggle-line:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  .app-header.is-mobile-open .app-nav-toggle-line:nth-child(2) {
+    opacity: 0;
+  }
+
+  .app-header.is-mobile-open .app-nav-toggle-line:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
   }
 
   .app-nav {
+    display: none;
     width: 100%;
     gap: 0.55rem;
+    padding-top: 0.15rem;
+  }
+
+  .app-nav.is-open {
+    display: flex;
   }
 
   .nav-link {
@@ -1284,6 +1359,14 @@ p {
     padding: 0.7rem 0.9rem;
     border-color: rgba(199, 227, 221, 0.95);
     background: rgba(255, 255, 255, 0.92);
+  }
+
+  .app-main {
+    padding-bottom: 0;
+  }
+
+  .app-footer-mobile-hidden {
+    display: none;
   }
 
   .question-row {
