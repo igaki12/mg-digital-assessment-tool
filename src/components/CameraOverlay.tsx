@@ -143,7 +143,7 @@ function OverlaySvg({ icon }: { icon: OverlayIcon }) {
 
 type CameraOverlayProps = {
   tone?: "guide" | "active";
-  topMessage: string;
+  topMessage?: string;
   topLabel?: string;
   centerIcons?: OverlayIcon[];
   centerPrimary?: ReactNode;
@@ -158,16 +158,22 @@ export default function CameraOverlay({
   centerPrimary,
   centerSecondary
 }: CameraOverlayProps) {
+  const hasTopText = Boolean(topMessage);
+
   return (
     <div className={`camera-overlay camera-overlay-${tone}`}>
-      <div className="camera-overlay-top">
+      <div
+        className={`camera-overlay-top${hasTopText ? "" : " camera-overlay-top-compact"}`}
+      >
         <div className="camera-overlay-topbar">
           <span className="camera-overlay-audio">
             <OverlaySvg icon="audio" />
           </span>
-          <span className="camera-overlay-toplabel">{topLabel}</span>
+          {hasTopText ? (
+            <span className="camera-overlay-toplabel">{topLabel}</span>
+          ) : null}
         </div>
-        <p className="camera-overlay-message">{topMessage}</p>
+        {hasTopText ? <p className="camera-overlay-message">{topMessage}</p> : null}
       </div>
 
       <div className="camera-overlay-center">

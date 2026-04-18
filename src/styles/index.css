@@ -423,6 +423,13 @@ p {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
 }
 
+.camera-overlay-top-compact {
+  justify-self: start;
+  gap: 0;
+  padding: 0.55rem;
+  border-radius: 999px;
+}
+
 .camera-overlay-topbar {
   display: flex;
   align-items: center;

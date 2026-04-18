@@ -318,10 +318,6 @@ export default function PtosisAssessment() {
   }, [showOverlay]);
 
   const isRunning = phase === "waiting" || phase === "measuring";
-  const overlayTopMessage =
-    phase === "measuring"
-      ? "頭を動かさず 目だけで上を見てください"
-      : "顔を枠に合わせて そのまま待ってください";
   const overlayPrimary =
     phase === "measuring" ? (
       <span className="camera-overlay-countdown">{Math.max(0, 30 - elapsed)}</span>
@@ -362,8 +358,6 @@ export default function PtosisAssessment() {
           ) : null}
           <CameraOverlay
             tone={phase === "measuring" ? "active" : "guide"}
-            topLabel={phase === "measuring" ? "眼の検査" : "位置合わせ"}
-            topMessage={overlayTopMessage}
             centerPrimary={overlayPrimary}
           />
         </div>
