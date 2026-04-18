@@ -21,7 +21,8 @@ const files = {
   "expression.done": "表情の検査（仮面様顔貌・瞬目）終了時.wav",
   "voice.task1": "音声の検査（構音障害・発声機能）タスク1持続母音.wav",
   "voice.task2": "音声の検査（構音障害・発声機能）タスク2数字のカウント.wav",
-  "voice.task3": "音声の検査（構音障害・発声機能）タスク3定型分の音読.wav"
+  "voice.task3": "音声の検査（構音障害・発声機能）タスク3定型分の音読.wav",
+  "voice.done": "音声の検査（構音障害・発声機能）終了時.wav"
 } as const;
 
 export type AnnouncementKey = keyof typeof files;

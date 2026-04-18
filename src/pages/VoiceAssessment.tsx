@@ -92,7 +92,7 @@ export default function VoiceAssessment() {
     }
   }, [results]);
 
-  const resetSession = useCallback(() => {
+  const resetSession = useCallback((nextStatusText = "開始すると3つの音声タスクを順番に案内します。") => {
     cleanupStream();
     cleanupUrls();
     setSessionStarted(false);
@@ -104,7 +104,7 @@ export default function VoiceAssessment() {
       count: { clip: null, previewUrl: null },
       reading: { clip: null, previewUrl: null }
     });
-    setStatusText("開始すると3つの音声タスクを順番に案内します。");
+    setStatusText(nextStatusText);
   }, [cleanupStream, cleanupUrls]);
 
   const startSession = useCallback(async () => {
@@ -249,8 +249,8 @@ export default function VoiceAssessment() {
       clips
     });
 
-    setStatusText("保存しました。再度検査することもできます。");
-    resetSession();
+    void announcementController.interruptAndPlay("voice.done");
+    resetSession("保存しました。再度検査することもできます。");
   }, [resetSession, results]);
 
   useEffect(() => {
