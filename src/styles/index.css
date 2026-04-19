@@ -891,6 +891,27 @@ p {
   gap: 1rem;
 }
 
+.voice-metrics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.voice-metrics-grid .metric {
+  min-width: 0;
+  padding: 0.72rem 0.55rem;
+  gap: 0.22rem;
+  text-align: center;
+}
+
+.voice-metrics-grid .metric span {
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.voice-metrics-grid .metric strong {
+  font-size: 1.05rem;
+}
+
 .voice-clip-card {
   padding: 1rem;
 }
@@ -924,6 +945,22 @@ p {
 
   .voice-task-title-row {
     gap: 0.55rem;
+  }
+
+  .voice-metrics-grid {
+    gap: 0.42rem;
+  }
+
+  .voice-metrics-grid .metric {
+    padding: 0.66rem 0.42rem;
+  }
+
+  .voice-metrics-grid .metric span {
+    font-size: 0.68rem;
+  }
+
+  .voice-metrics-grid .metric strong {
+    font-size: 0.96rem;
   }
 
   .camera-panel {
