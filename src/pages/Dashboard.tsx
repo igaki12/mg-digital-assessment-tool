@@ -340,6 +340,10 @@ export default function Dashboard() {
             radial-gradient(circle at top right, rgba(188, 255, 226, 0.28), transparent 35%),
             linear-gradient(180deg, #ffffff 0%, #f4fbf8 100%);
         }
+        .browser-support-modal-close {
+          margin-left: auto;
+          flex: 0 0 auto;
+        }
         .browser-support-modal-copy {
           display: grid;
           gap: 0.8rem;
@@ -514,7 +518,11 @@ export default function Dashboard() {
                   {browserPromptAppName || "このブラウザ"}ではマイクとカメラが使えない場合があります
                 </h2>
               </div>
-              <button type="button" className="ghost-button" onClick={dismissBrowserPrompt}>
+              <button
+                type="button"
+                className="ghost-button browser-support-modal-close"
+                onClick={dismissBrowserPrompt}
+              >
                 閉じる
               </button>
             </div>
