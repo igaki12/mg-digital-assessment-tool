@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AssessmentGuideSpotlight from "../components/AssessmentGuideSpotlight";
 import Layout from "../components/Layout";
+import PrimaryButton from "../components/PrimaryButton";
 import { listSessions } from "../storage/db";
 import type { SessionMeta } from "../types";
+import { detectBrowserSupportNotice } from "../utils/browserSupport";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("ja-JP", {
@@ -27,12 +29,48 @@ const typeLabels: Record<SessionMeta["type"], string> = {
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
+  const [showBrowserPrompt, setShowBrowserPrompt] = useState(false);
+  const [browserPromptAppName, setBrowserPromptAppName] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => {
     listSessions().then((data) =>
       setSessions(data.sort((a, b) => b.date.localeCompare(a.date)))
     );
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      if (window.sessionStorage.getItem("dismissed-browser-support-prompt") === "1") {
+        return;
+      }
+    } catch (error) {
+      console.warn("Unable to read browser prompt session state", error);
+    }
+
+    const notice = detectBrowserSupportNotice(window.navigator.userAgent);
+    if (!notice.shouldRecommendExternalBrowser) {
+      return;
+    }
+
+    setBrowserPromptAppName(notice.appName);
+    setShowBrowserPrompt(true);
+  }, []);
+
+  useEffect(() => {
+    if (!copyMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyMessage("");
+    }, 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyMessage]);
 
   const recent = sessions.slice(0, 3);
   const summary = useMemo(() => {
@@ -49,6 +87,46 @@ export default function Dashboard() {
       avg: avg.toFixed(2)
     };
   }, [sessions]);
+
+  function dismissBrowserPrompt() {
+    try {
+      window.sessionStorage.setItem("dismissed-browser-support-prompt", "1");
+    } catch (error) {
+      console.warn("Unable to persist browser prompt session state", error);
+    }
+    setShowBrowserPrompt(false);
+  }
+
+  async function copyCurrentLink() {
+    const currentUrl = window.location.href;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+        setCopyMessage("現在のリンクをコピーしました。");
+        return;
+      }
+    } catch (error) {
+      console.warn("Clipboard API copy failed", error);
+    }
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = currentUrl;
+      textArea.setAttribute("readonly", "true");
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopyMessage(copied ? "現在のリンクをコピーしました。" : "リンクをコピーできませんでした。");
+    } catch (error) {
+      console.warn("Fallback copy failed", error);
+      setCopyMessage("リンクをコピーできませんでした。");
+    }
+  }
 
   return (
     <Layout>
@@ -254,6 +332,42 @@ export default function Dashboard() {
           align-items: center;
           gap: 0.4rem;
         }
+        .browser-support-modal {
+          width: min(640px, 100%);
+          display: grid;
+          gap: 1.2rem;
+          background:
+            radial-gradient(circle at top right, rgba(188, 255, 226, 0.28), transparent 35%),
+            linear-gradient(180deg, #ffffff 0%, #f4fbf8 100%);
+        }
+        .browser-support-modal-copy {
+          display: grid;
+          gap: 0.8rem;
+          padding: 1rem;
+          border-radius: 18px;
+          background: rgba(234, 245, 242, 0.92);
+          border: 1px solid rgba(29, 111, 106, 0.12);
+        }
+        .browser-support-modal-copy p {
+          margin: 0;
+        }
+        .browser-support-modal-copy code {
+          display: block;
+          width: 100%;
+          overflow-x: auto;
+          padding: 0.8rem 0.9rem;
+          border-radius: 14px;
+          background: rgba(14, 44, 46, 0.08);
+          color: var(--ink);
+          font-size: 0.86rem;
+          word-break: break-all;
+        }
+        .browser-support-modal-status {
+          min-height: 1.2rem;
+          color: var(--accent);
+          font-size: 0.9rem;
+          font-weight: 700;
+        }
 
         /* Staggered Animations */
         .fade-in-up {
@@ -283,6 +397,12 @@ export default function Dashboard() {
           transform: translateY(-8px);
           box-shadow: 0 20px 40px rgba(16, 42, 43, 0.1), 0 0 0 1px rgba(127, 214, 170, 0.2);
           border-top-color: var(--accent);
+        }
+
+        @media (max-width: 640px) {
+          .browser-support-modal {
+            gap: 1rem;
+          }
         }
 
       `}</style>
@@ -373,6 +493,61 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {showBrowserPrompt ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={dismissBrowserPrompt}
+        >
+          <div
+            className="modal-card browser-support-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="browser-support-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="sync-card-header">
+              <div>
+                <p className="sync-banner-eyebrow">Browser Support</p>
+                <h2 id="browser-support-modal-title">
+                  {browserPromptAppName || "このブラウザ"}ではマイクとカメラが使えない場合があります
+                </h2>
+              </div>
+              <button type="button" className="ghost-button" onClick={dismissBrowserPrompt}>
+                閉じる
+              </button>
+            </div>
+
+            <div className="terms-body">
+              <section>
+                <h3>標準ブラウザで開くことを推奨します</h3>
+                <p>
+                  LINE などのアプリ内ブラウザや一部のブラウザアプリでは、カメラ・マイクの権限取得に失敗することがあります。
+                  可能であれば端末の標準ブラウザ、または Chrome / Safari / Microsoft Edge
+                  でこのページを開いてください。
+                </p>
+              </section>
+            </div>
+
+            <div className="browser-support-modal-copy">
+              <p>現在のページリンクをコピーして、標準ブラウザへ貼り付けて開けます。</p>
+              <code>{typeof window !== "undefined" ? window.location.href : ""}</code>
+              <div className="button-row">
+                <PrimaryButton type="button" onClick={() => void copyCurrentLink()}>
+                  現在のリンクをコピー
+                </PrimaryButton>
+                <button type="button" className="ghost-button" onClick={dismissBrowserPrompt}>
+                  このまま続ける
+                </button>
+              </div>
+              <p className="browser-support-modal-status" aria-live="polite">
+                {copyMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </Layout>
   );
 }
