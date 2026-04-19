@@ -377,10 +377,19 @@ export default function VoiceAssessment() {
                   {!sessionStarted ? (
                     <PrimaryButton onClick={startSession}>案内開始</PrimaryButton>
                   ) : null}
-                  {sessionStarted && !recording ? (
+                  {sessionStarted && !recording && !result.clip ? (
                     <PrimaryButton disabled={processing} onClick={() => void startRecording()}>
                       録音開始
                     </PrimaryButton>
+                  ) : null}
+                  {sessionStarted && !recording && result.clip ? (
+                    <button
+                      className="ghost-button"
+                      disabled={processing}
+                      onClick={() => void startRecording()}
+                    >
+                      録音をやり直す
+                    </button>
                   ) : null}
                   {recording ? (
                     <button className="ghost-button" onClick={() => void stopRecording()}>
@@ -399,13 +408,9 @@ export default function VoiceAssessment() {
                     </button>
                   ) : null}
                   {result.clip && index < voiceTasks.length - 1 ? (
-                    <button
-                      className="ghost-button"
-                      disabled={processing}
-                      onClick={() => moveToTask(index + 1)}
-                    >
+                    <PrimaryButton disabled={processing} onClick={() => moveToTask(index + 1)}>
                       次のタスクへ
-                    </button>
+                    </PrimaryButton>
                   ) : null}
                   {result.clip && index === voiceTasks.length - 1 ? (
                     <PrimaryButton disabled={!canSave || processing} onClick={() => void saveSession()}>
