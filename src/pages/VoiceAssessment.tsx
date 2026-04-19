@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { analyzeVoiceBlob } from "../audio/voiceAnalysis";
@@ -59,11 +59,16 @@ function getSupportedMimeType() {
 export default function VoiceAssessment() {
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const meterContextRef = useRef<AudioContext | null>(null);
+  const meterSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const meterAnalyserRef = useRef<AnalyserNode | null>(null);
+  const meterFrameRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef<number | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [meterHeights, setMeterHeights] = useState([0.24, 0.38, 0.56, 0.42, 0.28]);
   const [statusText, setStatusText] = useState(
     "開始すると3つの音声タスクを順番に案内します。"
   );
@@ -76,6 +81,74 @@ export default function VoiceAssessment() {
 
   const activeTask = voiceTasks[activeTaskIndex] ?? voiceTasks[0]!;
   const canSave = voiceTasks.every((task) => Boolean(results[task.id].clip));
+
+  const stopLevelMeter = useCallback(() => {
+    if (meterFrameRef.current !== null) {
+      window.cancelAnimationFrame(meterFrameRef.current);
+      meterFrameRef.current = null;
+    }
+    meterSourceRef.current?.disconnect();
+    meterSourceRef.current = null;
+    meterAnalyserRef.current?.disconnect();
+    meterAnalyserRef.current = null;
+    if (meterContextRef.current?.state !== "closed") {
+      void meterContextRef.current?.close();
+    }
+    meterContextRef.current = null;
+    setMeterHeights([0.24, 0.38, 0.56, 0.42, 0.28]);
+  }, []);
+
+  const startLevelMeter = useCallback(async (stream: MediaStream) => {
+    stopLevelMeter();
+
+    const AudioContextClass =
+      window.AudioContext ||
+      // @ts-expect-error webkit fallback
+      window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return;
+    }
+
+    try {
+      const context = new AudioContextClass();
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
+      source.connect(analyser);
+
+      const sampleBuffer = new Uint8Array(analyser.frequencyBinCount);
+      const basePattern = [0.54, 0.8, 1, 0.86, 0.62];
+
+      const updateMeter = () => {
+        analyser.getByteFrequencyData(sampleBuffer);
+        const averageLevel =
+          sampleBuffer.reduce((sum, value) => sum + value, 0) /
+          (sampleBuffer.length * 255 || 1);
+        const boostedLevel = Math.min(1, averageLevel * 2.3);
+        setMeterHeights(
+          basePattern.map((factor, index) =>
+            Number(
+              Math.min(1, 0.18 + boostedLevel * factor + (index % 2 === 0 ? 0.03 : 0)).toFixed(3)
+            )
+          )
+        );
+        meterFrameRef.current = window.requestAnimationFrame(updateMeter);
+      };
+
+      meterContextRef.current = context;
+      meterSourceRef.current = source;
+      meterAnalyserRef.current = analyser;
+      updateMeter();
+    } catch (error) {
+      console.warn("Unable to start voice level meter", error);
+      stopLevelMeter();
+    }
+  }, [stopLevelMeter]);
 
   const ensureAudioStream = useCallback(async () => {
     const currentStream = streamRef.current;
@@ -94,6 +167,7 @@ export default function VoiceAssessment() {
   }, []);
 
   const cleanupStream = useCallback(() => {
+    stopLevelMeter();
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
@@ -103,7 +177,7 @@ export default function VoiceAssessment() {
     streamRef.current = null;
     chunksRef.current = [];
     startedAtRef.current = null;
-  }, []);
+  }, [stopLevelMeter]);
 
   const cleanupUrls = useCallback(() => {
     for (const result of Object.values(results)) {
@@ -162,12 +236,14 @@ export default function VoiceAssessment() {
         }
       };
       recorder.onerror = () => {
+        stopLevelMeter();
         recorderRef.current = null;
         setRecording(false);
         setProcessing(false);
         setStatusText("録音を開始できませんでした。もう一度お試しください。");
       };
       recorder.onstart = () => {
+        void startLevelMeter(stream);
         setRecording(true);
         setStatusText(`${activeTask.label} を録音しています。必要な長さで停止してください。`);
       };
@@ -175,11 +251,12 @@ export default function VoiceAssessment() {
       recorder.start();
     } catch (error) {
       console.warn("Unable to start voice recording", error);
+      stopLevelMeter();
       recorderRef.current = null;
       setRecording(false);
       setStatusText("録音を開始できませんでした。マイク設定を確認して再試行してください。");
     }
-  }, [activeTask.label, ensureAudioStream, processing, recording]);
+  }, [activeTask.label, ensureAudioStream, processing, recording, startLevelMeter, stopLevelMeter]);
 
   const stopRecording = useCallback(async () => {
     const recorder = recorderRef.current;
@@ -188,6 +265,7 @@ export default function VoiceAssessment() {
     }
 
     recorderRef.current = null;
+    stopLevelMeter();
     setRecording(false);
     setProcessing(true);
     setStatusText("録音データを解析しています。");
@@ -239,7 +317,7 @@ export default function VoiceAssessment() {
     startedAtRef.current = null;
     setProcessing(false);
     setStatusText(`${activeTask.label} の録音が完了しました。再録音することもできます。`);
-  }, [activeTask.id, activeTask.label, recording]);
+  }, [activeTask.id, activeTask.label, recording, stopLevelMeter]);
 
   const moveToTask = useCallback((index: number) => {
     const nextTask = voiceTasks[index];
@@ -353,6 +431,22 @@ export default function VoiceAssessment() {
 
               {result.previewUrl ? (
                 <audio className="voice-preview" controls src={result.previewUrl} />
+              ) : null}
+
+              {isActive && recording ? (
+                <div className="voice-recording-meter" aria-live="polite">
+                  <span className="voice-recording-dot" aria-hidden="true" />
+                  <span className="voice-recording-label">録音中</span>
+                  <div className="voice-recording-bars" aria-hidden="true">
+                    {meterHeights.map((height, meterIndex) => (
+                      <span
+                        key={`${task.id}-${meterIndex}`}
+                        className="voice-recording-bar"
+                        style={{ "--meter-scale": `${height}` } as CSSProperties}
+                      />
+                    ))}
+                  </div>
+                </div>
               ) : null}
 
               {result.clip ? (
