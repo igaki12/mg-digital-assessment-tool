@@ -872,26 +872,18 @@ p {
   .ptosis-camera-panel {
     gap: 0.35rem;
     margin: 0 0.75rem;
-    padding-bottom: calc(11.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .ptosis-camera-sidebar {
-    position: fixed;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: max(0.6rem, env(safe-area-inset-bottom, 0px));
     display: grid;
     gap: 0.55rem;
+    margin-top: 0.25rem;
     padding: 0.7rem;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     box-shadow: 0 -10px 24px rgba(16, 42, 43, 0.12);
-    z-index: 12;
-    max-height: min(34svh, calc(100dvh - 4.75rem - env(safe-area-inset-bottom, 0px)));
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 
   .ptosis-button-row {
