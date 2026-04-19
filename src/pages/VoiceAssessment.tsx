@@ -77,11 +77,32 @@ export default function VoiceAssessment() {
   const activeTask = voiceTasks[activeTaskIndex] ?? voiceTasks[0]!;
   const canSave = voiceTasks.every((task) => Boolean(results[task.id].clip));
 
+  const ensureAudioStream = useCallback(async () => {
+    const currentStream = streamRef.current;
+    const hasLiveTrack = currentStream?.getAudioTracks().some((track) => track.readyState === "live");
+    if (currentStream && hasLiveTrack) {
+      return currentStream;
+    }
+
+    currentStream?.getTracks().forEach((track) => track.stop());
+    const nextStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false
+    });
+    streamRef.current = nextStream;
+    return nextStream;
+  }, []);
+
   const cleanupStream = useCallback(() => {
-    recorderRef.current?.stop();
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
     recorderRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    chunksRef.current = [];
+    startedAtRef.current = null;
   }, []);
 
   const cleanupUrls = useCallback(() => {
@@ -110,11 +131,7 @@ export default function VoiceAssessment() {
   const startSession = useCallback(async () => {
     try {
       announcementController.enableAutoplay();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-      });
-      streamRef.current = stream;
+      await ensureAudioStream();
       setSessionStarted(true);
       setStatusText("最初のタスクの案内が流れます。準備ができたら録音できます。");
       void announcementController.interruptAndPlay(activeTask.announcement);
@@ -122,53 +139,79 @@ export default function VoiceAssessment() {
       console.warn("Unable to start voice assessment", error);
       setStatusText("マイクへのアクセスが許可されていません。設定を確認してください。");
     }
-  }, [activeTask.announcement]);
+  }, [activeTask.announcement, ensureAudioStream]);
 
-  const startRecording = useCallback(() => {
-    const stream = streamRef.current;
-    if (!stream || recording || processing) {
+  const startRecording = useCallback(async () => {
+    if (recording || processing) {
       return;
     }
-    announcementController.stopCurrent();
-    const mimeType = getSupportedMimeType();
-    const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
-    chunksRef.current = [];
-    startedAtRef.current = Date.now();
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
-    };
-    recorderRef.current = recorder;
-    recorder.start();
-    setRecording(true);
-    setStatusText(`${activeTask.label} を録音しています。必要な長さで停止してください。`);
-  }, [activeTask.label, processing, recording]);
+
+    try {
+      announcementController.stopCurrent();
+      const stream = await ensureAudioStream();
+      const mimeType = getSupportedMimeType();
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      chunksRef.current = [];
+      startedAtRef.current = Date.now();
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+      recorder.onerror = () => {
+        recorderRef.current = null;
+        setRecording(false);
+        setProcessing(false);
+        setStatusText("録音を開始できませんでした。もう一度お試しください。");
+      };
+      recorder.onstart = () => {
+        setRecording(true);
+        setStatusText(`${activeTask.label} を録音しています。必要な長さで停止してください。`);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+    } catch (error) {
+      console.warn("Unable to start voice recording", error);
+      recorderRef.current = null;
+      setRecording(false);
+      setStatusText("録音を開始できませんでした。マイク設定を確認して再試行してください。");
+    }
+  }, [activeTask.label, ensureAudioStream, processing, recording]);
 
   const stopRecording = useCallback(async () => {
-    if (!recorderRef.current || !recording) {
+    const recorder = recorderRef.current;
+    if (!recorder || !recording) {
       return;
     }
+
+    recorderRef.current = null;
     setRecording(false);
     setProcessing(true);
     setStatusText("録音データを解析しています。");
 
     const blob = await new Promise<Blob>((resolve) => {
-      const recorder = recorderRef.current;
-      if (!recorder) {
-        resolve(new Blob());
+      const finalize = () => {
+        const nextMimeType = recorder.mimeType || "audio/webm";
+        resolve(new Blob(chunksRef.current, { type: nextMimeType }));
+      };
+
+      if (recorder.state === "inactive") {
+        finalize();
         return;
       }
-      recorder.onstop = () => {
-        const mimeType = recorder.mimeType || "audio/webm";
-        resolve(new Blob(chunksRef.current, { type: mimeType }));
-      };
+
+      recorder.addEventListener("stop", finalize, { once: true });
+      try {
+        recorder.requestData();
+      } catch (error) {
+        console.warn("Unable to flush voice recording data", error);
+      }
       recorder.stop();
     });
 
-    recorderRef.current = null;
     const metrics = await analyzeVoiceBlob(blob);
     const durationSec =
       startedAtRef.current === null ? 0 : (Date.now() - startedAtRef.current) / 1000;
@@ -192,6 +235,8 @@ export default function VoiceAssessment() {
         }
       };
     });
+    chunksRef.current = [];
+    startedAtRef.current = null;
     setProcessing(false);
     setStatusText(`${activeTask.label} の録音が完了しました。再録音することもできます。`);
   }, [activeTask.id, activeTask.label, recording]);
@@ -321,10 +366,10 @@ export default function VoiceAssessment() {
               {isActive ? (
                 <div className="button-row">
                   {!sessionStarted ? (
-                    <PrimaryButton onClick={startSession}>検査開始</PrimaryButton>
+                    <PrimaryButton onClick={startSession}>案内開始</PrimaryButton>
                   ) : null}
                   {sessionStarted && !recording ? (
-                    <PrimaryButton disabled={processing} onClick={startRecording}>
+                    <PrimaryButton disabled={processing} onClick={() => void startRecording()}>
                       録音開始
                     </PrimaryButton>
                   ) : null}
