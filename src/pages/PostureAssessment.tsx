@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -358,6 +359,10 @@ export default function PostureAssessment() {
           側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。
         </p>
       </section>
+      <AssessmentAudioGuide
+        announcementKey="pageIntro.posture"
+        summary="この検査では、正面と横向きの姿勢から、体の傾きや前かがみの角度を確認します。普段通りの自然な姿勢で進めます。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

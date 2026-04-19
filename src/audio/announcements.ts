@@ -1,4 +1,4 @@
-const files = {
+const publicFiles = {
   "common.faceMissing": "顔が枠に入っていない時.wav",
   "common.bodyMissing": "全身が枠に入っていない時（姿勢計測時）.wav",
   "common.autoTrigger": "認識完了・計測開始時（オートトリガー）.wav",
@@ -25,8 +25,27 @@ const files = {
   "voice.done": "音声の検査（構音障害・発声機能）終了時.wav"
 } as const;
 
-export type AnnouncementKey = keyof typeof files;
+const pageIntroFiles = {
+  "pageIntro.ptosis": "眼の検査ページ（眼瞼下垂：上方視試験）.wav",
+  "pageIntro.limbs": "腕の検査ページ（上肢筋力）.wav",
+  "pageIntro.gait": "歩行監視モードページ（歩行）.wav",
+  "pageIntro.posture": "姿勢の検査ページ（正面・側面）.wav",
+  "pageIntro.expression": "表情の検査ページ（仮面様顔貌・瞬目）.wav",
+  "pageIntro.voice": "音声の検査ページ（構音障害・発声機能）.wav"
+} as const;
+
+export type AnnouncementKey =
+  | keyof typeof publicFiles
+  | keyof typeof pageIntroFiles;
 
 export function getAnnouncementUrl(key: AnnouncementKey) {
-  return `${import.meta.env.BASE_URL}audio/${encodeURIComponent(files[key])}`;
+  if (key in publicFiles) {
+    return `${import.meta.env.BASE_URL}audio/${encodeURIComponent(
+      publicFiles[key as keyof typeof publicFiles]
+    )}`;
+  }
+
+  return `${import.meta.env.BASE_URL}audio/${encodeURIComponent(
+    pageIntroFiles[key as keyof typeof pageIntroFiles]
+  )}`;
 }

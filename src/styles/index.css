@@ -767,6 +767,109 @@ p {
   font-size: 1.05rem;
 }
 
+.assessment-audio-guide {
+  display: grid;
+  gap: 1rem;
+}
+
+.assessment-audio-guide-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.assessment-audio-guide-copy {
+  margin: 0;
+}
+
+.assessment-audio-guide-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(243, 251, 248, 0.96);
+  border: 1px solid rgba(29, 111, 106, 0.14);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.assessment-audio-guide-indicator.is-playing {
+  color: var(--accent);
+  background: linear-gradient(135deg, rgba(230, 249, 240, 0.98) 0%, rgba(216, 244, 235, 0.98) 100%);
+  border-color: rgba(29, 111, 106, 0.22);
+  box-shadow: 0 10px 24px rgba(29, 111, 106, 0.08);
+}
+
+.assessment-audio-guide-icon {
+  display: inline-flex;
+  align-items: end;
+  gap: 0.16rem;
+  height: 1rem;
+}
+
+.assessment-audio-guide-icon span {
+  width: 0.2rem;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #59c3ae 0%, #1d6f6a 100%);
+  transform-origin: center bottom;
+  transform: scaleY(0.34);
+}
+
+.assessment-audio-guide-indicator.is-playing .assessment-audio-guide-icon span:nth-child(1) {
+  animation: assessment-audio-bars 0.88s ease-in-out infinite 0.08s;
+}
+
+.assessment-audio-guide-indicator.is-playing .assessment-audio-guide-icon span:nth-child(2) {
+  animation: assessment-audio-bars 1.02s ease-in-out infinite 0.22s;
+}
+
+.assessment-audio-guide-indicator.is-playing .assessment-audio-guide-icon span:nth-child(3) {
+  animation: assessment-audio-bars 0.94s ease-in-out infinite 0.14s;
+}
+
+.assessment-audio-guide-indicator.is-playing .assessment-audio-guide-icon span:nth-child(4) {
+  animation: assessment-audio-bars 1.08s ease-in-out infinite 0.3s;
+}
+
+.assessment-audio-guide-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.assessment-audio-guide-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex: 1 1 320px;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.assessment-audio-guide-volume span {
+  white-space: nowrap;
+}
+
+.assessment-audio-guide-volume input[type="range"] {
+  flex: 1 1 auto;
+  accent-color: var(--accent);
+}
+
+.assessment-audio-guide-volume strong {
+  min-width: 3rem;
+  text-align: right;
+  color: var(--accent);
+}
+
 .ptosis-phase-overlay {
   position: absolute;
   top: 0.9rem;
@@ -974,6 +1077,18 @@ p {
   }
 }
 
+@keyframes assessment-audio-bars {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
 @keyframes voice-recording-dot-pulse {
   0%,
   100% {
@@ -1003,6 +1118,20 @@ p {
 
   .voice-task-title-row {
     gap: 0.55rem;
+  }
+
+  .assessment-audio-guide-controls {
+    gap: 0.7rem;
+  }
+
+  .assessment-audio-guide-volume {
+    width: 100%;
+    gap: 0.65rem;
+  }
+
+  .assessment-audio-guide-indicator {
+    width: 100%;
+    justify-content: center;
   }
 
   .voice-recording-meter {

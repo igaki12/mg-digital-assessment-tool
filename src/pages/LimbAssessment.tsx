@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
+import { announcementController } from "../audio/controller";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { syncOverlayCanvas } from "../mediapipe/canvas";
@@ -89,6 +91,7 @@ export default function LimbAssessment() {
     if (running) {
       return;
     }
+    announcementController.stopCurrent();
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
       audio: false
@@ -152,6 +155,10 @@ export default function LimbAssessment() {
         <h1>上肢挙上テスト</h1>
         <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
       </section>
+      <AssessmentAudioGuide
+        announcementKey="pageIntro.limbs"
+        summary="この検査では、両腕を上げた姿勢をどのくらい保てるかを確認します。腕の上がり方や途中で下がらないかを見ます。"
+      />
       <section className="camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />

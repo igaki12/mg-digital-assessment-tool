@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -344,6 +345,11 @@ export default function PtosisAssessment() {
           </p>
         </section>
       ) : null}
+
+      <AssessmentAudioGuide
+        announcementKey="pageIntro.ptosis"
+        summary="この検査では、上を見続けたときのまぶたの下がりやすさを確認します。音声ガイドの音量を調整してから始められます。"
+      />
 
       <section className="camera-panel ptosis-camera-panel">
         <div ref={frameElementRef} className="camera-frame">

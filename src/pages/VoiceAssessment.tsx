@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { analyzeVoiceBlob } from "../audio/voiceAnalysis";
@@ -390,6 +391,10 @@ export default function VoiceAssessment() {
         <h1>音声検査</h1>
         <p>構音障害や発声変化を見るために、持続母音、数字カウント、定型文音読を順に録音します。</p>
       </section>
+      <AssessmentAudioGuide
+        announcementKey="pageIntro.voice"
+        summary="この検査では、声の出しやすさやかすれ、話す速さの変化を確認します。音声ガイドの音量を調整してから始められます。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

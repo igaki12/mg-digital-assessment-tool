@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -343,6 +344,10 @@ export default function ExpressionAssessment() {
         <h1>表情検査</h1>
         <p>仮面様顔貌と瞬目の傾向を見るために、自然表情10秒と笑顔5秒を順に記録します。</p>
       </section>
+      <AssessmentAudioGuide
+        announcementKey="pageIntro.expression"
+        summary="この検査では、自然な表情と笑顔を見て、表情の動きやまばたきの様子を確認します。音声ガイドの音量をここで調整できます。"
+      />
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>
