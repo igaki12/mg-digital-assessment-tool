@@ -26,12 +26,12 @@ const publicFiles = {
 } as const;
 
 const pageIntroFiles = {
-  "pageIntro.ptosis": "眼の検査ページ（眼瞼下垂：上方視試験）.wav",
-  "pageIntro.limbs": "腕の検査ページ（上肢筋力）.wav",
-  "pageIntro.gait": "歩行監視モードページ（歩行）.wav",
-  "pageIntro.posture": "姿勢の検査ページ（正面・側面）.wav",
-  "pageIntro.expression": "表情の検査ページ（仮面様顔貌・瞬目）.wav",
-  "pageIntro.voice": "音声の検査ページ（構音障害・発声機能）.wav"
+  "pageIntro.ptosis": "page-intro-ptosis.wav",
+  "pageIntro.limbs": "page-intro-limbs.wav",
+  "pageIntro.gait": "page-intro-gait.wav",
+  "pageIntro.posture": "page-intro-posture.wav",
+  "pageIntro.expression": "page-intro-expression.wav",
+  "pageIntro.voice": "page-intro-voice.wav"
 } as const;
 
 export type AnnouncementKey =
