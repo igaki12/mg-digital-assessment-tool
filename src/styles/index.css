@@ -869,12 +869,12 @@ p {
     font-size: 0.78rem;
   }
 
-  .ptosis-camera-panel {
+  .camera-panel {
     gap: 0.35rem;
     margin: 0 0.75rem;
   }
 
-  .ptosis-camera-sidebar {
+  .camera-sidebar {
     display: grid;
     gap: 0.55rem;
     margin-top: 0.25rem;
@@ -886,7 +886,7 @@ p {
     box-shadow: 0 -10px 24px rgba(16, 42, 43, 0.12);
   }
 
-  .ptosis-button-row {
+  .camera-sidebar .button-row {
     margin-top: 0;
     padding: 0;
     border-radius: 0;
@@ -897,32 +897,32 @@ p {
     justify-content: center;
   }
 
-  .ptosis-button-row .primary-button,
-  .ptosis-button-row .ghost-button {
+  .camera-sidebar .button-row .primary-button,
+  .camera-sidebar .button-row .ghost-button {
     flex: 1 1 calc(50% - 0.5rem);
     min-width: 0;
     padding-left: 1rem;
     padding-right: 1rem;
   }
 
-  .ptosis-camera-metrics {
+  .camera-sidebar .camera-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.45rem;
   }
 
-  .ptosis-camera-metrics .metric {
+  .camera-sidebar .camera-metrics .metric {
     min-width: 0;
     padding: 0.7rem 0.5rem;
     gap: 0.2rem;
     text-align: center;
   }
 
-  .ptosis-camera-metrics .metric span {
+  .camera-sidebar .camera-metrics .metric span {
     font-size: 0.72rem;
     line-height: 1.25;
   }
 
-  .ptosis-camera-metrics .metric strong {
+  .camera-sidebar .camera-metrics .metric strong {
     font-size: 1.05rem;
   }
 }

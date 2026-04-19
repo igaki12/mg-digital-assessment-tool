@@ -1,5 +1,21 @@
-<<<<<<< ours
 # AGENTS.md - MG Digital Assessment Tool (Project Draft)
+
+このリポジトリでは、`AGENTS.md` をエージェント向けの作業ガイドとして使う。
+
+## 0. 参照順
+
+1. [PRODUCT_REQUIREMENTS_MG_PD.md](./PRODUCT_REQUIREMENTS_MG_PD.md)
+2. [PRODUCT_DRAFT_LEGACY_MG.md](./PRODUCT_DRAFT_LEGACY_MG.md)
+3. [PD_POSTURE_UX_NOTES.md](./PD_POSTURE_UX_NOTES.md)
+
+## 0-2. 作業ルール
+
+- 現行実装は MG 中心のプロトタイプとして扱う
+- PD 対応は段階追加とし、未実装機能を「実装済み」とは書かない
+- 単眼カメラでの絶対精度を過剰に約束しない
+- 本アプリは診断補助ではなく経時比較支援を目的とする
+- 認証、同意、クラウド保存はバックエンド前提の別フェーズとして扱う
+- 要件書を更新するときは、現行実装 / 次期機能 / 研究課題を混在させない
 
 ## 1. プロジェクト概要
 **目的:** 重症筋無力症（MG）患者が自宅で手軽に重症度を記録・管理できるWebアプリケーションの開発。
@@ -196,6 +212,18 @@
     *   ログイン確認中のローディングは短めにし、送信進捗パネルは送信開始前は表示しない。
     *   `同期済み動画を削除して容量を確保` で削除する対象は、このページ滞在中に送信成功したセッションに紐づく `videos` のみとし、`sessions` と `time_series_data` は残す。
     *   未同期サマリーは「データ量 / 件数」を1枚のカードにまとめ、短く表示する。
+9.  **Ptosis 再計測時の MediaPipe ループ管理について:**
+    *   30秒計測完了後に `もう一度測定` を押した際、古い `requestAnimationFrame` ループや停止済み `video` を再利用しない。
+    *   `stopStream()` では track 停止に加えて `video.pause()` と `video.srcObject = null` を行い、再計測ごとに run id を切り替えて古い非同期処理を無効化する。
+    *   `detectForVideo` 実行前に `readyState`、`videoWidth`、`videoHeight`、stream の active 状態を確認し、未準備フレームでは推論しない。
+10. **Ptosis 画面のフェーズ表示とオーバーレイについて:**
+    *   眼瞼下垂テストでは、カメラ上部の文言オーバーレイを廃止し、フェーズ表示カード本体をカメラ上部へ重ねて表示する。
+    *   `CameraOverlay` の上部は Ptosis では音声アイコンのみ残し、フェーズ名は `topLabel` に近い小さなラベル表現で表示する。
+    *   フェーズバナーの背景は黒基調の半透明ガラス風とし、カメラ上のオーバーレイデザインに合わせる。
+11. **モバイル測定画面の camera-sidebar について:**
+    *   `camera-sidebar` はモバイル端末でも画面下部固定にしない。通常フロー内に配置し、小さめの `margin-top` でカメラ直下へ続けて表示する。
+    *   理由は、一部モバイル環境で固定レイヤーがカメラ許可導線に干渉したため。
+    *   Ptosis で調整したモバイル時の `camera-sidebar` / `button-row` / `camera-metrics` のコンパクトなカードデザインは、`/#/limbs` を含む他のカメラ検査にも共通適用する。
 
 ---
 
@@ -998,23 +1026,3 @@ Pose Landmarker（完全版）	ポーズ検出器: 224 x 224 x 3
 *   **眼瞼下垂:** MediaPipe FaceMeshでまぶたの距離を測定するロジックを採用。
 *   **ウェアラブル代替:** パッシブで筋疲労を計測していたPAMSysセンサーの機能を、 監視カメラのような形でビデオベースの解析（歩行・姿勢）で代替する設計。
 *   **ePRO:** 重症筋無力症の MG-ADL/MG-QOL15rをそのままデジタル化。
-=======
-# AGENTS.md
-
-このリポジトリでは、`AGENTS.md` はエージェント向けの作業ガイドとして使う。
-
-## 参照順
-
-1. [PRODUCT_REQUIREMENTS_MG_PD.md](./PRODUCT_REQUIREMENTS_MG_PD.md)
-2. [PRODUCT_DRAFT_LEGACY_MG.md](./PRODUCT_DRAFT_LEGACY_MG.md)
-3. [PD_POSTURE_UX_NOTES.md](./PD_POSTURE_UX_NOTES.md)
-
-## 作業ルール
-
-- 現行実装は MG 中心のプロトタイプとして扱う
-- PD 対応は段階追加とし、未実装機能を「実装済み」とは書かない
-- 単眼カメラでの絶対精度を過剰に約束しない
-- 本アプリは診断補助ではなく経時比較支援を目的とする
-- 認証、同意、クラウド保存はバックエンド前提の別フェーズとして扱う
-- 要件書を更新するときは、現行実装 / 次期機能 / 研究課題を混在させない
->>>>>>> theirs
