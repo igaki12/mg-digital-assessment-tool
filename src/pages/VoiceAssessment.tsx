@@ -333,11 +333,20 @@ export default function VoiceAssessment() {
               }`}
             >
               <div className="voice-task-header">
-                <div>
-                  <h2>{task.label}</h2>
+                <div className="voice-task-heading">
+                  <div className="voice-task-title-row">
+                    <span className="voice-task-order-badge">
+                      {index + 1}/{voiceTasks.length}
+                    </span>
+                    <h2>{task.label}</h2>
+                  </div>
                   <p>{task.instruction}</p>
                 </div>
-                <span className="voice-task-badge">
+                <span
+                  className={`voice-task-badge${
+                    isActive && !result.clip ? " current" : ""
+                  }`}
+                >
                   {result.clip ? "録音済み" : isActive ? "現在のタスク" : "未着手"}
                 </span>
               </div>

@@ -827,6 +827,38 @@ p {
   flex-wrap: wrap;
 }
 
+.voice-task-heading {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.voice-task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.voice-task-title-row h2 {
+  margin-bottom: 0;
+}
+
+.voice-task-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.2rem;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e8f8f0 0%, #d5efe7 100%);
+  border: 1px solid rgba(44, 156, 154, 0.18);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .voice-task-badge {
   display: inline-flex;
   align-items: center;
@@ -838,6 +870,15 @@ p {
   color: var(--ink);
   font-weight: 700;
   font-size: 0.85rem;
+}
+
+.voice-task-badge.current {
+  position: relative;
+  background: linear-gradient(135deg, #edf9f3 0%, #dcf5eb 100%);
+  border-color: rgba(29, 111, 106, 0.28);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(29, 111, 106, 0.05), 0 10px 24px rgba(29, 111, 106, 0.12);
+  animation: voice-task-badge-breathe 2.6s ease-in-out infinite;
 }
 
 .voice-preview {
@@ -854,6 +895,18 @@ p {
   padding: 1rem;
 }
 
+@keyframes voice-task-badge-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 1px rgba(29, 111, 106, 0.05), 0 10px 24px rgba(29, 111, 106, 0.1);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(29, 111, 106, 0.08), 0 14px 28px rgba(29, 111, 106, 0.16);
+  }
+}
+
 @media (max-width: 720px) {
   .ptosis-phase-overlay {
     top: 0.7rem;
@@ -867,6 +920,10 @@ p {
 
   .ptosis-phase-overlay .phase-banner strong {
     font-size: 0.78rem;
+  }
+
+  .voice-task-title-row {
+    gap: 0.55rem;
   }
 
   .camera-panel {
