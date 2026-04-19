@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { announcementController } from "../audio/controller";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
+import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { addSession, addTimeSeries, addVideo } from "../storage/db";
@@ -30,6 +31,7 @@ export default function GaitAssessment() {
   );
   const [running, setRunning] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const isCompactViewport = useIsCompactViewport();
   const [speed, setSpeed] = useState(0);
   const [leftKnee, setLeftKnee] = useState(0);
   const [rightKnee, setRightKnee] = useState(0);
@@ -204,16 +206,22 @@ export default function GaitAssessment() {
     }
   }, [showOverlay]);
 
+  const showIntroContent = !isCompactViewport || !running;
+
   return (
     <Layout>
-      <section className="page-header">
-        <h1>歩行監視モード</h1>
-        <p>カメラの前に立つと録画が始まります。いつも通り歩いてください。</p>
-      </section>
-      <AssessmentAudioGuide
-        announcementKey="pageIntro.gait"
-        summary="この検査では、歩く速さや膝の動き、姿勢の傾きを確認します。音声ガイドを聞いてから、いつも通り歩いてください。"
-      />
+      {showIntroContent ? (
+        <section className="page-header">
+          <h1>歩行監視モード</h1>
+          <p>カメラの前に立つと録画が始まります。いつも通り歩いてください。</p>
+        </section>
+      ) : null}
+      {showIntroContent ? (
+        <AssessmentAudioGuide
+          announcementKey="pageIntro.gait"
+          summary="この検査では、歩く速さや膝の動き、姿勢の傾きを確認します。音声ガイドを聞いてから、いつも通り歩いてください。"
+        />
+      ) : null}
       <section className="camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />

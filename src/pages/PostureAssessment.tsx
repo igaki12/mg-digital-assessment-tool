@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
+import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
@@ -39,6 +40,7 @@ export default function PostureAssessment() {
   const [phase, setPhase] = useState<PosturePhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
   const [countdown, setCountdown] = useState(5);
+  const isCompactViewport = useIsCompactViewport();
   const [statusText, setStatusText] = useState(
     "開始すると正面姿勢を検知して5秒計測し、その後に側面姿勢を計測します。"
   );
@@ -350,19 +352,24 @@ export default function PostureAssessment() {
         : phase === "sideWaiting"
           ? "横向きになると始まります"
           : "正面が整うと始まります";
+  const showIntroContent = !isCompactViewport || !isRunning;
 
   return (
     <Layout>
-      <section className="page-header">
-        <h1>姿勢検査</h1>
-        <p>
-          側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。
-        </p>
-      </section>
-      <AssessmentAudioGuide
-        announcementKey="pageIntro.posture"
-        summary="この検査では、正面と横向きの姿勢から、体の傾きや前かがみの角度を確認します。普段通りの自然な姿勢で進めます。"
-      />
+      {showIntroContent ? (
+        <section className="page-header">
+          <h1>姿勢検査</h1>
+          <p>
+            側方偏位、体幹前屈角、首下がり角を順に確認します。正面と側面で、それぞれ5秒間の保持計測を行います。
+          </p>
+        </section>
+      ) : null}
+      {showIntroContent ? (
+        <AssessmentAudioGuide
+          announcementKey="pageIntro.posture"
+          summary="この検査では、正面と横向きの姿勢から、体の傾きや前かがみの角度を確認します。普段通りの自然な姿勢で進めます。"
+        />
+      ) : null}
 
       <section className="card phase-card">
         <p className="phase-label">現在のフェーズ</p>

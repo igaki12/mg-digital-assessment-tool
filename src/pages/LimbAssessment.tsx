@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { announcementController } from "../audio/controller";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
+import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { syncOverlayCanvas } from "../mediapipe/canvas";
@@ -19,6 +20,7 @@ export default function LimbAssessment() {
   const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const [running, setRunning] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const isCompactViewport = useIsCompactViewport();
   const [leftAngle, setLeftAngle] = useState(0);
   const [rightAngle, setRightAngle] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -149,16 +151,22 @@ export default function LimbAssessment() {
     }
   }, [showOverlay]);
 
+  const showIntroContent = !isCompactViewport || !running;
+
   return (
     <Layout>
-      <section className="page-header">
-        <h1>上肢挙上テスト</h1>
-        <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
-      </section>
-      <AssessmentAudioGuide
-        announcementKey="pageIntro.limbs"
-        summary="この検査では、両腕を上げた姿勢をどのくらい保てるかを確認します。腕の上がり方や途中で下がらないかを見ます。"
-      />
+      {showIntroContent ? (
+        <section className="page-header">
+          <h1>上肢挙上テスト</h1>
+          <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
+        </section>
+      ) : null}
+      {showIntroContent ? (
+        <AssessmentAudioGuide
+          announcementKey="pageIntro.limbs"
+          summary="この検査では、両腕を上げた姿勢をどのくらい保てるかを確認します。腕の上がり方や途中で下がらないかを見ます。"
+        />
+      ) : null}
       <section className="camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />

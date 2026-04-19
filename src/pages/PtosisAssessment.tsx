@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
+import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
 import { announcementController } from "../audio/controller";
@@ -32,6 +33,7 @@ export default function PtosisAssessment() {
   const [earLeft, setEarLeft] = useState(0);
   const [earRight, setEarRight] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const isCompactViewport = useIsCompactViewport();
   const [statusText, setStatusText] = useState(
     "開始すると音声案内に合わせて顔位置を確認します。"
   );
@@ -325,7 +327,7 @@ export default function PtosisAssessment() {
     ) : (
       <span className="camera-overlay-hint">自動で開始</span>
     );
-  const showIntroHeader = phase === "idle";
+  const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
   const phaseTitle =
     phase === "idle"
       ? "待機中"
@@ -337,7 +339,7 @@ export default function PtosisAssessment() {
 
   return (
     <Layout>
-      {showIntroHeader ? (
+      {showIntroContent ? (
         <section className="page-header">
           <h1>眼瞼下垂テスト</h1>
           <p>
@@ -346,10 +348,12 @@ export default function PtosisAssessment() {
         </section>
       ) : null}
 
-      <AssessmentAudioGuide
-        announcementKey="pageIntro.ptosis"
-        summary="この検査では、上を見続けたときのまぶたの下がりやすさを確認します。音声ガイドの音量を調整してから始められます。"
-      />
+      {showIntroContent ? (
+        <AssessmentAudioGuide
+          announcementKey="pageIntro.ptosis"
+          summary="この検査では、上を見続けたときのまぶたの下がりやすさを確認します。音声ガイドの音量を調整してから始められます。"
+        />
+      ) : null}
 
       <section className="camera-panel ptosis-camera-panel">
         <div ref={frameElementRef} className="camera-frame">

@@ -67,7 +67,7 @@ export default function AssessmentAudioGuide({
           className="ghost-button"
           onClick={() => void announcementController.interruptAndPlay(announcementKey)}
         >
-          もう一度聞く
+          音声案内を聞く
         </button>
 
         <label className="assessment-audio-guide-volume">
