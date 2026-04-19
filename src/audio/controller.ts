@@ -201,6 +201,10 @@ class AnnouncementController {
       this.emitState();
       return true;
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        clear();
+        return false;
+      }
       console.warn("Failed to play announcement", key, error);
       clear();
       return false;

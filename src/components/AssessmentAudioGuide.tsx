@@ -24,9 +24,6 @@ export default function AssessmentAudioGuide({
   }, []);
 
   useEffect(() => {
-    announcementController.enableAutoplay();
-    void announcementController.interruptAndPlay(announcementKey);
-
     return () => {
       const state = announcementController.getState();
       if (state.currentKey === announcementKey) {
@@ -65,7 +62,10 @@ export default function AssessmentAudioGuide({
         <button
           type="button"
           className="ghost-button"
-          onClick={() => void announcementController.interruptAndPlay(announcementKey)}
+          onClick={() => {
+            announcementController.enableAutoplay();
+            void announcementController.interruptAndPlay(announcementKey);
+          }}
         >
           音声案内を聞く
         </button>
