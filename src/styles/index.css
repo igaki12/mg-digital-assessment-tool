@@ -440,8 +440,7 @@ p {
   gap: 0.5rem;
 }
 
-.camera-overlay-audio,
-.camera-overlay-icon-chip {
+.camera-overlay-audio {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -452,8 +451,7 @@ p {
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.camera-overlay-audio svg,
-.camera-overlay-icon-chip svg {
+.camera-overlay-audio svg {
   width: 1.15rem;
   height: 1.15rem;
 }
@@ -483,12 +481,6 @@ p {
   text-align: center;
 }
 
-.camera-overlay-icons {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
 .camera-overlay-primary {
   display: inline-flex;
   align-items: center;
@@ -502,16 +494,6 @@ p {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-}
-
-.camera-overlay-secondary {
-  padding: 0.5rem 0.85rem;
-  border-radius: 999px;
-  background: rgba(7, 23, 25, 0.48);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
 }
 
 .camera-overlay-countdown {

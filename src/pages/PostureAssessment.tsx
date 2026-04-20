@@ -426,16 +426,6 @@ export default function PostureAssessment() {
     ) : (
       <span className="camera-overlay-hint">自動で開始</span>
     );
-  const overlaySecondary =
-    phase === "frontHolding"
-      ? "正面をキープ"
-      : phase === "sideHolding"
-        ? "横向きをキープ"
-        : phase === "sideWaiting"
-          ? "横向きになると始まります"
-          : phase === "completed"
-            ? "結果を保存できます"
-            : "正面が整うと始まります";
   const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
@@ -464,7 +454,6 @@ export default function PostureAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
-            centerSecondary={overlaySecondary}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

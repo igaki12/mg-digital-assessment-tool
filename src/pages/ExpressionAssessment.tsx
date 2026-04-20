@@ -418,12 +418,6 @@ export default function ExpressionAssessment() {
         {phase === "smileWaiting" ? "笑顔を作ると開始" : "顔が入ると開始"}
       </span>
     );
-  const overlaySecondary =
-    phase === "completed"
-      ? "結果を保存できます"
-      : phase === "smileWaiting" || phase === "smileHolding"
-        ? "笑顔の検査"
-        : "自然な表情";
   const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
@@ -450,7 +444,6 @@ export default function ExpressionAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
-            centerSecondary={overlaySecondary}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

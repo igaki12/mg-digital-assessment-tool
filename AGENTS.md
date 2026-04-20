@@ -226,6 +226,8 @@
     *   眼瞼下垂テストでは、Ptosis 専用のフェーズ表示 DOM を別途重ねず、`CameraOverlay` の `topLabel` / `topMessage` にフェーズ名と状態文言を渡して上部表示を統一する。
     *   旧 `ptosis-phase-overlay` / `phase-banner` のような個別オーバーレイは廃止し、上部ガイド表示は `CameraOverlay` 側の共通 UI に寄せる。
     *   Ptosis の上部表示も他のカメラ検査と同じ黒基調の半透明ガラス風オーバーレイに揃える。
+    *   `CameraOverlay` の `centerIcons` は全体方針として原則使わず、中央表示はカウントダウンや短い補助文言など、計測に直接必要な情報を優先する。
+    *   中央の意味づけは `topLabel` / `topMessage` / `centerPrimary` / `centerSecondary` のテキストで完結させ、装飾的なアイコン列は増やさない。
 11. **モバイル測定画面の camera-sidebar について:**
     *   `camera-sidebar` はモバイル端末でも画面下部固定にしない。通常フロー内に配置し、小さめの `margin-top` でカメラ直下へ続けて表示する。
     *   理由は、一部モバイル環境で固定レイヤーがカメラ許可導線に干渉したため。

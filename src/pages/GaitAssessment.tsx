@@ -395,10 +395,6 @@ export default function GaitAssessment() {
     ) : (
       <span className="camera-overlay-hint">全身が入ると開始</span>
     );
-  const overlaySecondary =
-    phase === "measuring"
-      ? "いつも通り歩いてください"
-      : "全身が映る位置に立ってください";
   const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
@@ -423,9 +419,7 @@ export default function GaitAssessment() {
             tone={phase === "measuring" ? "active" : "guide"}
             topLabel={phaseTitle}
             topMessage={statusText}
-            centerIcons={["body"]}
             centerPrimary={overlayPrimary}
-            centerSecondary={overlaySecondary}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
