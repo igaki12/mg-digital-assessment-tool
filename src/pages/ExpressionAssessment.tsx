@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
@@ -37,6 +37,9 @@ export default function ExpressionAssessment() {
   const readyFramesRef = useRef(0);
   const blinkCountRef = useRef(0);
   const blinkClosedRef = useRef(false);
+  const runIdRef = useRef(0);
+  const phaseRef = useRef<ExpressionPhase>("idle");
+  const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<ExpressionPhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
   const [statusText, setStatusText] = useState(
@@ -55,13 +58,23 @@ export default function ExpressionAssessment() {
     smileSymmetry: number;
   } | null>(null);
 
+  const updatePhase = useCallback((nextPhase: ExpressionPhase) => {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }, []);
+
   const stopStream = useCallback(() => {
-    if (frameRef.current) {
+    runIdRef.current += 1;
+    if (frameRef.current !== null) {
       cancelAnimationFrame(frameRef.current);
     }
     frameRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (canvas && ctx) {
@@ -89,7 +102,7 @@ export default function ExpressionAssessment() {
       announcementController.stopCurrent();
       await playSignalBeep();
       holdStartedAtRef.current = Date.now();
-      setPhase(nextPhase);
+      updatePhase(nextPhase);
       if (nextPhase === "restHolding") {
         setCountdown(10);
         setStatusText("自然な顔のまま10秒間キープしてください。");
@@ -98,7 +111,7 @@ export default function ExpressionAssessment() {
         setStatusText("できるだけ大きな笑顔を5秒間キープしてください。");
       }
     },
-    []
+    [updatePhase]
   );
 
   const finishMeasurement = useCallback(() => {
@@ -123,121 +136,179 @@ export default function ExpressionAssessment() {
       smileAmplitude,
       smileSymmetry: symmetry
     });
-    setPhase("completed");
+    updatePhase("completed");
     setStatusText("表情検査が終了しました。保存して結果を記録できます。");
     void announcementController.interruptAndPlay("expression.done");
-  }, [stopStream]);
+  }, [stopStream, updatePhase]);
 
-  const tick = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    const result = (await getFaceLandmarker()).detectForVideo(video, performance.now());
-    const faceReady = isFaceCentered(result);
-    const ear = extractEar(result);
-    const smile = extractSmileMetrics(result);
-    const avgEar = (ear.left + ear.right) / 2;
-
-    setSmileLeft(smile.left);
-    setSmileRight(smile.right);
-    setSmileSymmetry(smile.symmetry);
-
-    if (canvas && ctx && showOverlay && result.faceLandmarks?.length) {
-      if (!drawingUtilsRef.current) {
-        drawingUtilsRef.current = new DrawingUtils(ctx);
+  const tick = useCallback(
+    async (runId: number) => {
+      if (runId !== runIdRef.current) {
+        return;
       }
-      syncOverlayCanvas(video, canvas, frameElementRef.current);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const drawingUtils = drawingUtilsRef.current;
-      for (const landmarks of result.faceLandmarks) {
-        drawingUtils.drawConnectors(
-          landmarks,
-          FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-          { color: "rgba(255, 255, 255, 0.16)", lineWidth: 1 }
-        );
-      }
-    } else if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
 
-    if (phase === "restWaiting") {
-      if (!faceReady) {
-        readyFramesRef.current = 0;
-        setStatusText("顔が枠に入るよう、カメラとの距離を調整してください。");
-        void announcementController.play("common.faceMissing", {
-          cooldownMs: 4000
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+
+      const stream = streamRef.current;
+      if (!stream?.active) {
+        return;
+      }
+
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      const landmarker = await getFaceLandmarker();
+      if (runId !== runIdRef.current) {
+        return;
+      }
+
+      if (
+        video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+        video.videoWidth === 0 ||
+        video.videoHeight === 0
+      ) {
+        frameRef.current = requestAnimationFrame(() => {
+          void tick(runId);
         });
-      } else {
-        readyFramesRef.current += 1;
-        if (readyFramesRef.current >= 6) {
-          await startHold("restHolding");
+        return;
+      }
+
+      let result;
+      try {
+        result = landmarker.detectForVideo(video, performance.now());
+      } catch (error) {
+        if (runId !== runIdRef.current) {
+          return;
+        }
+        console.warn("Skipping expression frame because the video is not ready", error);
+        frameRef.current = requestAnimationFrame(() => {
+          void tick(runId);
+        });
+        return;
+      }
+
+      if (runId !== runIdRef.current) {
+        return;
+      }
+
+      const faceReady = isFaceCentered(result);
+      const ear = extractEar(result);
+      const smile = extractSmileMetrics(result);
+      const avgEar = (ear.left + ear.right) / 2;
+
+      setSmileLeft(smile.left);
+      setSmileRight(smile.right);
+      setSmileSymmetry(smile.symmetry);
+
+      if (canvas && ctx && showOverlayRef.current && result.faceLandmarks?.length) {
+        if (!drawingUtilsRef.current) {
+          drawingUtilsRef.current = new DrawingUtils(ctx);
+        }
+        syncOverlayCanvas(video, canvas, frameElementRef.current);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const drawingUtils = drawingUtilsRef.current;
+        for (const landmarks of result.faceLandmarks) {
+          drawingUtils.drawConnectors(
+            landmarks,
+            FaceLandmarker.FACE_LANDMARKS_TESSELATION,
+            { color: "rgba(255, 255, 255, 0.16)", lineWidth: 1 }
+          );
+        }
+      } else if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const currentPhase = phaseRef.current;
+      if (currentPhase === "restWaiting") {
+        if (!faceReady) {
+          readyFramesRef.current = 0;
+          setStatusText("顔が枠に入るよう、カメラとの距離を調整してください。");
+          void announcementController.play("common.faceMissing", {
+            cooldownMs: 4000
+          });
+        } else {
+          readyFramesRef.current += 1;
+          if (readyFramesRef.current >= 6) {
+            await startHold("restHolding");
+            if (runId !== runIdRef.current) {
+              return;
+            }
+          }
+        }
+      } else if (currentPhase === "restHolding" && holdStartedAtRef.current) {
+        const elapsedMs = Date.now() - holdStartedAtRef.current;
+        setCountdown(Math.max(0, 10 - Math.floor(elapsedMs / 1000)));
+        if (avgEar < 0.19) {
+          blinkClosedRef.current = true;
+        } else if (blinkClosedRef.current) {
+          blinkClosedRef.current = false;
+          blinkCountRef.current += 1;
+          setBlinkCount(blinkCountRef.current);
+        }
+        seriesRef.current.push({
+          timestamp: Date.now(),
+          blinkCount: blinkCountRef.current,
+          blinkRatePerMin: blinkCountRef.current * 6
+        });
+        if (elapsedMs >= 10000) {
+          holdStartedAtRef.current = null;
+          updatePhase("smileWaiting");
+          setStatusText("できるだけ大きな笑顔を作ってください。");
+          void announcementController.interruptAndPlay("expression.smile");
+        }
+      } else if (currentPhase === "smileWaiting") {
+        if (!faceReady) {
+          readyFramesRef.current = 0;
+          setStatusText("顔が枠に入るよう、カメラとの距離を調整してください。");
+          void announcementController.play("common.faceMissing", {
+            cooldownMs: 4000
+          });
+        } else if (smile.amplitude < 0.25) {
+          readyFramesRef.current = 0;
+          setStatusText("口角を上げて歯を見せるように笑顔を作ってください。");
+        } else {
+          readyFramesRef.current += 1;
+          if (readyFramesRef.current >= 4) {
+            await startHold("smileHolding");
+            if (runId !== runIdRef.current) {
+              return;
+            }
+          }
+        }
+      } else if (currentPhase === "smileHolding" && holdStartedAtRef.current) {
+        const elapsedMs = Date.now() - holdStartedAtRef.current;
+        setCountdown(Math.max(0, 5 - Math.floor(elapsedMs / 1000)));
+        seriesRef.current.push({
+          timestamp: Date.now(),
+          smileLeft: smile.left,
+          smileRight: smile.right,
+          smileSymmetry: smile.symmetry
+        });
+        if (elapsedMs >= 5000) {
+          finishMeasurement();
         }
       }
-    } else if (phase === "restHolding" && holdStartedAtRef.current) {
-      const elapsedMs = Date.now() - holdStartedAtRef.current;
-      setCountdown(Math.max(0, 10 - Math.floor(elapsedMs / 1000)));
-      if (avgEar < 0.19) {
-        blinkClosedRef.current = true;
-      } else if (blinkClosedRef.current) {
-        blinkClosedRef.current = false;
-        blinkCountRef.current += 1;
-        setBlinkCount(blinkCountRef.current);
-      }
-      seriesRef.current.push({
-        timestamp: Date.now(),
-        blinkCount: blinkCountRef.current,
-        blinkRatePerMin: blinkCountRef.current * 6
-      });
-      if (elapsedMs >= 10000) {
-        holdStartedAtRef.current = null;
-        setPhase("smileWaiting");
-        setStatusText("できるだけ大きな笑顔を作ってください。");
-        void announcementController.interruptAndPlay("expression.smile");
-      }
-    } else if (phase === "smileWaiting") {
-      if (!faceReady) {
-        readyFramesRef.current = 0;
-        setStatusText("顔が枠に入るよう、カメラとの距離を調整してください。");
-        void announcementController.play("common.faceMissing", {
-          cooldownMs: 4000
-        });
-      } else if (smile.amplitude < 0.25) {
-        readyFramesRef.current = 0;
-        setStatusText("口角を上げて歯を見せるように笑顔を作ってください。");
-      } else {
-        readyFramesRef.current += 1;
-        if (readyFramesRef.current >= 4) {
-          await startHold("smileHolding");
-        }
-      }
-    } else if (phase === "smileHolding" && holdStartedAtRef.current) {
-      const elapsedMs = Date.now() - holdStartedAtRef.current;
-      setCountdown(Math.max(0, 5 - Math.floor(elapsedMs / 1000)));
-      seriesRef.current.push({
-        timestamp: Date.now(),
-        smileLeft: smile.left,
-        smileRight: smile.right,
-        smileSymmetry: smile.symmetry
-      });
-      if (elapsedMs >= 5000) {
-        finishMeasurement();
-      }
-    }
 
-    frameRef.current = requestAnimationFrame(() => {
-      void tick();
-    });
-  }, [finishMeasurement, phase, showOverlay, startHold]);
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
+
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    },
+    [finishMeasurement, startHold, updatePhase]
+  );
 
   const start = useCallback(async () => {
+    const currentPhase = phaseRef.current;
     if (
-      phase === "restWaiting" ||
-      phase === "restHolding" ||
-      phase === "smileWaiting" ||
-      phase === "smileHolding"
+      currentPhase === "restWaiting" ||
+      currentPhase === "restHolding" ||
+      currentPhase === "smileWaiting" ||
+      currentPhase === "smileHolding"
     ) {
       return;
     }
@@ -248,6 +319,8 @@ export default function ExpressionAssessment() {
         video: { facingMode: "user" },
         audio: false
       });
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -260,18 +333,18 @@ export default function ExpressionAssessment() {
           );
         }
       }
-      setPhase("restWaiting");
+      updatePhase("restWaiting");
       setStatusText("自然な顔でカメラを見てください。");
       void announcementController.interruptAndPlay("expression.rest");
       frameRef.current = requestAnimationFrame(() => {
-        void tick();
+        void tick(runId);
       });
     } catch (error) {
       console.warn("Unable to start expression assessment", error);
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
-      setPhase("idle");
+      updatePhase("idle");
     }
-  }, [phase, resetMeasurement, tick]);
+  }, [resetMeasurement, tick, updatePhase]);
 
   const save = useCallback(async () => {
     const summary = completedSummary;
@@ -292,17 +365,17 @@ export default function ExpressionAssessment() {
       details: summary
     });
     resetMeasurement();
-    setPhase("idle");
+    updatePhase("idle");
     setStatusText("保存しました。再度検査することもできます。");
-  }, [completedSummary, resetMeasurement]);
+  }, [completedSummary, resetMeasurement, updatePhase]);
 
   const cancel = useCallback(() => {
     stopStream();
     announcementController.stopCurrent();
     resetMeasurement();
-    setPhase("idle");
+    updatePhase("idle");
     setStatusText("開始すると自然表情10秒、笑顔5秒の順で検査します。");
-  }, [resetMeasurement, stopStream]);
+  }, [resetMeasurement, stopStream, updatePhase]);
 
   useEffect(() => {
     return () => {
@@ -311,35 +384,51 @@ export default function ExpressionAssessment() {
     };
   }, [stopStream]);
 
-  const isRunning = useMemo(
-    () =>
-      phase === "restWaiting" ||
-      phase === "restHolding" ||
-      phase === "smileWaiting" ||
-      phase === "smileHolding",
-    [phase]
-  );
-  const overlayTopMessage =
-    phase === "smileWaiting"
-      ? "口角を上げて 歯を見せるように笑ってください"
-      : phase === "smileHolding"
-        ? "笑顔を 5秒間 そのまま保ってください"
+  useEffect(() => {
+    showOverlayRef.current = showOverlay;
+    if (!showOverlay) {
+      drawingUtilsRef.current = null;
+    }
+  }, [showOverlay]);
+
+  const isRunning =
+    phase === "restWaiting" ||
+    phase === "restHolding" ||
+    phase === "smileWaiting" ||
+    phase === "smileHolding";
+  const phaseTitle =
+    phase === "idle"
+      ? "待機中"
+      : phase === "restWaiting"
+        ? "自然表情の位置合わせ"
         : phase === "restHolding"
-          ? "自然な顔で 10秒間 そのまま見てください"
-          : "自然な顔で カメラを見てください";
+          ? "自然表情を計測中"
+          : phase === "smileWaiting"
+            ? "笑顔の準備"
+            : phase === "smileHolding"
+              ? "笑顔を計測中"
+              : "保存待ち";
   const overlayPrimary =
     phase === "restHolding" || phase === "smileHolding" ? (
       <span className="camera-overlay-countdown">{countdown}</span>
+    ) : phase === "completed" ? (
+      <span className="camera-overlay-hint">保存待ち</span>
     ) : (
       <span className="camera-overlay-hint">
         {phase === "smileWaiting" ? "笑顔を作ると開始" : "顔が入ると開始"}
       </span>
     );
   const overlaySecondary =
+    phase === "completed"
+      ? "結果を保存できます"
+      : phase === "smileWaiting" || phase === "smileHolding"
+        ? "笑顔の検査"
+        : "自然な表情";
+  const overlayIcons =
     phase === "smileWaiting" || phase === "smileHolding"
-      ? "笑顔の検査"
-      : "自然な表情";
-  const showIntroContent = !isCompactViewport || !isRunning;
+      ? (["smile"] as const)
+      : (["face"] as const);
+  const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
     <Layout>
@@ -356,45 +445,22 @@ export default function ExpressionAssessment() {
         />
       ) : null}
 
-      <section className="card phase-card">
-        <p className="phase-label">現在のフェーズ</p>
-        <div className="phase-banner">
-          <strong>
-            {phase === "idle" && "待機中"}
-            {phase === "restWaiting" && "自然表情の位置合わせ"}
-            {phase === "restHolding" && "自然表情を計測中"}
-            {phase === "smileWaiting" && "笑顔の準備"}
-            {phase === "smileHolding" && "笑顔を計測中"}
-            {phase === "completed" && "保存待ち"}
-          </strong>
-          <span>{statusText}</span>
-        </div>
-      </section>
-
-      <section className="camera-panel">
+      <section className="camera-panel ptosis-camera-panel">
         <div ref={frameElementRef} className="camera-frame">
           <video ref={videoRef} playsInline muted className="camera-video" />
-          {showOverlay ? (
-            <canvas ref={canvasRef} className="camera-canvas" />
-          ) : null}
+          {showOverlay ? <canvas ref={canvasRef} className="camera-canvas" /> : null}
           <CameraOverlay
             tone={phase === "restHolding" || phase === "smileHolding" ? "active" : "guide"}
-            topLabel={
-              phase === "smileWaiting" || phase === "smileHolding"
-                ? "笑顔のタスク"
-                : "表情の検査"
-            }
-            topMessage={overlayTopMessage}
-            centerIcons={phase === "smileWaiting" || phase === "smileHolding" ? ["smile"] : ["face"]}
+            topLabel={phaseTitle}
+            topMessage={statusText}
+            centerIcons={[...overlayIcons]}
             centerPrimary={overlayPrimary}
             centerSecondary={overlaySecondary}
           />
         </div>
-        <div className="camera-sidebar">
-          <div className="button-row">
-            {phase === "idle" ? (
-              <PrimaryButton onClick={start}>検査開始</PrimaryButton>
-            ) : null}
+        <div className="camera-sidebar ptosis-camera-sidebar">
+          <div className="button-row ptosis-button-row">
+            {phase === "idle" ? <PrimaryButton onClick={start}>測定開始</PrimaryButton> : null}
             {isRunning ? (
               <>
                 <button className="ghost-button" onClick={cancel}>
@@ -419,7 +485,7 @@ export default function ExpressionAssessment() {
             ) : null}
           </div>
 
-          <div className="camera-metrics">
+          <div className="camera-metrics ptosis-camera-metrics">
             <div className="metric">
               <span>瞬目回数</span>
               <strong>{blinkCount}回</strong>
