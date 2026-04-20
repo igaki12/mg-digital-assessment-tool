@@ -873,6 +873,7 @@ p {
 
 .records-modal-card {
   width: min(760px, 100%);
+  position: relative;
 }
 
 .records-modal-header {
@@ -2023,9 +2024,25 @@ p {
 
   .records-card-header,
   .records-detail-header,
-  .records-modal-header,
   .records-row-heading {
     flex-direction: column;
+  }
+
+  .records-modal-card {
+    padding-top: 1.15rem;
+  }
+
+  .records-modal-header {
+    position: relative;
+    padding-right: 3.25rem;
+    min-height: 2.6rem;
+    align-items: flex-start;
+  }
+
+  .records-modal-close {
+    position: absolute;
+    top: 0;
+    right: 0;
   }
 
   .records-summary-pills {

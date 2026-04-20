@@ -28,6 +28,7 @@
 **技術スタック:**
 *   **Frontend:** React (SPA), Vite
 *   **AI/CV:** Google MediaPipe Tasks (Vision), TensorFlow.js backend
+*   **Charting:** Recharts
 *   **Hosting:** GitHub Pages
 *   **Storage:** IndexedDB (動画・時系列データ用), LocalStorage (設定・軽量データ用)
 
@@ -116,12 +117,16 @@
 
 *   **Store: `sessions`** (評価セッションごとのメタデータ)
     *   `id`: Timestamp
-    *   `type`: "ptosis" | "limbs" | "gait" | "epro"
+    *   `type`: "ptosis" | "limbs" | "gait" | "posture" | "expression" | "voice" | "epro"
     *   `date`: ISO String
-    *   `summary_score`: (例: EAR平均値, 歩行速度平均)
+    *   `summary_score`: (例: EAR平均値, 歩行速度平均, 姿勢スコア, 問診票合計点)
 *   **Store: `time_series_data`** (グラフ描画用)
     *   `session_id`: 参照キー
-    *   `frame_data`: Array of objects `{ timestamp, ear_left, ear_right, knee_angle, ... }`
+    *   `frame_data`: Array of objects `{ timestamp, earLeft, earRight, armLeftDeg, gaitSpeed, trunkFlexionDeg, blinkRatePerMin, voicePitchHz, ... }`
+    *   `details`: 検査サマリーや問診票内訳などの補足オブジェクト
+*   **Store: `audios`** (音声検査の録音データ)
+    *   `session_id`: 参照キー
+    *   `clips`: 音声タスクごとの Blob とメトリクス
 *   **Store: `videos`** (録画データ)
     *   `session_id`: 参照キー
     *   `blob`: VideoBlob (WebM/MP4)
@@ -144,7 +149,14 @@
     *   腕の検査 (Upper Limb)
     *   歩行監視モード (Gait Monitor)
     *   問診票 (Questionnaire)
-3.  **Measurement Views**
+3.  **Records / 記録を見る**
+    *   検査ごとのタブで履歴を切り替えて表示する
+    *   各検査で、代表値を切り替えながら `日毎の変動` と `日内変動` を確認できる
+    *   `日毎の変動` では、平均値に加えて最大値・最小値を線で表示し、その間を帯で着色する
+    *   `日内変動` では、直近1週間の平均的な日内リズムと本日の変動を重ねて見る
+    *   セッション一覧は選択中の検査だけを表示し、モバイルでは row タップで詳細モーダルを開く
+    *   モバイルで詳細モーダルを開いている間は背景スクロールを禁止する
+4.  **Measurement Views**
     *   各MediaPipe実装画面（カメラプレビュー + ガイドオーバーレイ）
     *   操作ボタンはメトリクス表示より上に配置し、狭いスマホ画面でも押しやすくする
     *   測定開始前は開始ボタンのみ表示し、測定中のみ「停止して保存」「推定表示ON/OFF」を表示する
@@ -153,7 +165,7 @@
     *   音声ガイドカードには、`音声案内を聞く` ボタンと音量調整 UI を同じカード内に配置してよい
     *   音声ガイド再生中は、音が出ていることが分かるコンパクトなアイコンまたはバーアニメーションを表示する
     *   結果プレビュー画面（保存するかキャンセルするか）
-4.  **Doctor's Share View / 医師共有**
+5.  **Doctor's Share View / 医師共有**
     *   未同期件数・未同期データ量・未同期期間・最終送信結果を確認できるサマリーを表示
     *   データ送信時のみ必要なログインUIを表示し、`ログインして送信準備をする` と `ログアウト` はトグルで片方のみ表示する
     *   利用規約チェックボックスと利用規約モーダルを設ける
@@ -247,6 +259,15 @@
     *   導入音声カードには、再生中インジケータと `もう一度聞く` 導線を含める。
     *   カメラを使う検査ページでは、モバイル計測中に導入音声カードも `page-header` と同じ条件で一時的に隠す。
     *   問診票ページは音声ガイド対象外とし、導入音声や音量調整 UI を前提にしない。
+14. **Records / 記録を見る ページの構成について:**
+    *   記録一覧は全件を単純に並べず、検査ごとのタブで分けて表示する。
+    *   グラフは Recharts を用い、検査ごとに代表値の切り替えをできるようにする。
+    *   `日毎の変動` は、日単位の平均値に加え、最大値と最小値を別線で描き、その間を半透明の帯で表現する。
+    *   `日毎の変動` の集計粒度は `日 / 週 / 月` を切り替え可能にし、週は ISO 週、月はローカル月で扱う。
+    *   `日内変動` は、保存済み測定値を時刻帯ごとにまとめた比較表示とし、連続監視の波形としては扱わない。
+    *   `日内変動` では、本日と直近1週間平均を重ねて表示する。
+    *   PC では一覧選択に応じて詳細カードを同一画面内で更新し、モバイルでは詳細をモーダル表示に切り替える。
+    *   モバイル詳細モーダルは閉じるアイコンボタンを使い、表示中は背景スクロールをロックする。
 
 ---
 

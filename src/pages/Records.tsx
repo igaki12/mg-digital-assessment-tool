@@ -691,6 +691,17 @@ export default function Records() {
 
     const sessionId = detailSession.id;
 
+    if (!Object.prototype.hasOwnProperty.call(recordCache, sessionId)) {
+      void getTimeSeries(sessionId).then((record) => {
+        setRecordCache((current) => {
+          if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
+            return current;
+          }
+          return { ...current, [sessionId]: record ?? null };
+        });
+      });
+    }
+
     if (!Object.prototype.hasOwnProperty.call(videoCache, sessionId)) {
       void getVideo(sessionId).then((video) => {
         setVideoCache((current) => {
