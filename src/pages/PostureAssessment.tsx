@@ -436,10 +436,6 @@ export default function PostureAssessment() {
           : phase === "completed"
             ? "結果を保存できます"
             : "正面が整うと始まります";
-  const overlayIcons =
-    phase === "sideWaiting" || phase === "sideHolding"
-      ? (["rotate", "body"] as const)
-      : (["body"] as const);
   const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
@@ -467,7 +463,6 @@ export default function PostureAssessment() {
             tone={phase === "frontHolding" || phase === "sideHolding" ? "active" : "guide"}
             topLabel={phaseTitle}
             topMessage={statusText}
-            centerIcons={[...overlayIcons]}
             centerPrimary={overlayPrimary}
             centerSecondary={overlaySecondary}
           />

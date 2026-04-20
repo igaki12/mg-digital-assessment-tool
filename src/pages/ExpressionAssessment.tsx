@@ -424,10 +424,6 @@ export default function ExpressionAssessment() {
       : phase === "smileWaiting" || phase === "smileHolding"
         ? "笑顔の検査"
         : "自然な表情";
-  const overlayIcons =
-    phase === "smileWaiting" || phase === "smileHolding"
-      ? (["smile"] as const)
-      : (["face"] as const);
   const showIntroContent = isCompactViewport ? !isRunning : phase === "idle";
 
   return (
@@ -453,7 +449,6 @@ export default function ExpressionAssessment() {
             tone={phase === "restHolding" || phase === "smileHolding" ? "active" : "guide"}
             topLabel={phaseTitle}
             topMessage={statusText}
-            centerIcons={[...overlayIcons]}
             centerPrimary={overlayPrimary}
             centerSecondary={overlaySecondary}
           />
