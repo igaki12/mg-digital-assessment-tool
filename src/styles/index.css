@@ -870,38 +870,6 @@ p {
   color: var(--accent);
 }
 
-.ptosis-phase-overlay {
-  position: absolute;
-  top: 0.9rem;
-  left: 4rem;
-  right: 0.9rem;
-  z-index: 3;
-  pointer-events: none;
-}
-
-.ptosis-phase-overlay .phase-banner {
-  gap: 0.45rem;
-  padding: 0.85rem 1rem;
-  background: rgba(7, 23, 25, 0.58);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 18px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
-}
-
-.ptosis-phase-overlay .phase-banner strong {
-  color: rgba(220, 255, 245, 0.92);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ptosis-phase-overlay .phase-banner span {
-  color: #ffffff;
-}
-
 .voice-task-stack {
   display: grid;
   gap: 1.1rem;
@@ -1102,20 +1070,6 @@ p {
 }
 
 @media (max-width: 720px) {
-  .ptosis-phase-overlay {
-    top: 0.7rem;
-    left: 3.5rem;
-    right: 0.7rem;
-  }
-
-  .ptosis-phase-overlay .phase-banner {
-    padding: 0.85rem 0.95rem;
-  }
-
-  .ptosis-phase-overlay .phase-banner strong {
-    font-size: 0.78rem;
-  }
-
   .voice-task-title-row {
     gap: 0.55rem;
   }

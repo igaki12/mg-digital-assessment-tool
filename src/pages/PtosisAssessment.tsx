@@ -25,6 +25,15 @@ export default function PtosisAssessment() {
   const readyFramesRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const progressCueRef = useRef({ ten: false, twenty: false });
+  const measurementTimersRef = useRef<{
+    progress10: number | null;
+    progress20: number | null;
+    complete: number | null;
+  }>({
+    progress10: null,
+    progress20: null,
+    complete: null
+  });
   const runIdRef = useRef(0);
   const phaseRef = useRef<PtosisPhase>("idle");
   const showOverlayRef = useRef(true);
@@ -38,7 +47,24 @@ export default function PtosisAssessment() {
     "開始すると音声案内に合わせて顔位置を確認します。"
   );
 
+  const clearMeasurementTimers = useCallback(() => {
+    const timers = measurementTimersRef.current;
+    if (timers.progress10 !== null) {
+      window.clearTimeout(timers.progress10);
+      timers.progress10 = null;
+    }
+    if (timers.progress20 !== null) {
+      window.clearTimeout(timers.progress20);
+      timers.progress20 = null;
+    }
+    if (timers.complete !== null) {
+      window.clearTimeout(timers.complete);
+      timers.complete = null;
+    }
+  }, []);
+
   const stopStream = useCallback(() => {
+    clearMeasurementTimers();
     runIdRef.current += 1;
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
@@ -55,9 +81,10 @@ export default function PtosisAssessment() {
     if (canvas && ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-  }, []);
+  }, [clearMeasurementTimers]);
 
   const resetMeasurement = useCallback(() => {
+    clearMeasurementTimers();
     seriesRef.current = [];
     readyFramesRef.current = 0;
     startTimeRef.current = null;
@@ -65,22 +92,42 @@ export default function PtosisAssessment() {
     setElapsed(0);
     setEarLeft(0);
     setEarRight(0);
-  }, []);
+  }, [clearMeasurementTimers]);
 
   const updatePhase = useCallback((nextPhase: PtosisPhase) => {
     phaseRef.current = nextPhase;
     setPhase(nextPhase);
   }, []);
 
+  const completeMeasurement = useCallback(() => {
+    clearMeasurementTimers();
+    stopStream();
+    updatePhase("completed");
+    setStatusText("終了です。保存して結果を記録できます。");
+    void announcementController.interruptAndPlay("ptosis.done");
+  }, [clearMeasurementTimers, stopStream, updatePhase]);
+
   const beginMeasurement = useCallback(async () => {
     announcementController.stopCurrent();
     await playSignalBeep();
+    clearMeasurementTimers();
     startTimeRef.current = Date.now();
     progressCueRef.current = { ten: false, twenty: false };
     setElapsed(0);
     updatePhase("measuring");
     setStatusText("良い位置です。30秒間、そのまま上を見てください。");
-  }, [updatePhase]);
+    measurementTimersRef.current.progress10 = window.setTimeout(() => {
+      progressCueRef.current.ten = true;
+      void announcementController.interruptAndPlay("ptosis.progress10");
+    }, 10000);
+    measurementTimersRef.current.progress20 = window.setTimeout(() => {
+      progressCueRef.current.twenty = true;
+      void announcementController.interruptAndPlay("ptosis.progress20");
+    }, 20000);
+    measurementTimersRef.current.complete = window.setTimeout(() => {
+      completeMeasurement();
+    }, 30000);
+  }, [clearMeasurementTimers, completeMeasurement, updatePhase]);
 
   const tick = useCallback(async (runId: number) => {
     if (runId !== runIdRef.current) {
@@ -195,21 +242,6 @@ export default function PtosisAssessment() {
         earLeft: ear.left,
         earRight: ear.right
       });
-
-      if (seconds >= 10 && !progressCueRef.current.ten) {
-        progressCueRef.current.ten = true;
-        void announcementController.interruptAndPlay("ptosis.progress10");
-      }
-      if (seconds >= 20 && !progressCueRef.current.twenty) {
-        progressCueRef.current.twenty = true;
-        void announcementController.interruptAndPlay("ptosis.progress20");
-      }
-      if (seconds >= 30) {
-        stopStream();
-        updatePhase("completed");
-        setStatusText("終了です。保存して結果を記録できます。");
-        void announcementController.interruptAndPlay("ptosis.done");
-      }
     }
 
     if (runId !== runIdRef.current || !streamRef.current?.active) {
@@ -361,15 +393,10 @@ export default function PtosisAssessment() {
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
-          <div className="ptosis-phase-overlay">
-            <div className="phase-banner">
-              <strong>{phaseTitle}</strong>
-              <span>{statusText}</span>
-            </div>
-          </div>
           <CameraOverlay
             tone={phase === "measuring" ? "active" : "guide"}
-            topLabel=""
+            topLabel={phaseTitle}
+            topMessage={statusText}
             centerPrimary={overlayPrimary}
           />
         </div>
