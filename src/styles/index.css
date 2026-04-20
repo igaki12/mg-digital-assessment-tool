@@ -826,6 +826,28 @@ p {
   gap: 1rem;
 }
 
+.records-detail-chart {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.records-detail-chart-header h3 {
+  margin-bottom: 0.35rem;
+  font-size: 1.05rem;
+}
+
+.records-detail-chart-header p {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+.records-detail-chart-frame {
+  border-radius: 18px;
+  border: 1px solid rgba(199, 227, 221, 0.75);
+  background: linear-gradient(180deg, #fbfefd 0%, #f1faf7 100%);
+  padding: 0.8rem 0.35rem 0.35rem;
+}
+
 .records-detail-header {
   display: flex;
   justify-content: space-between;

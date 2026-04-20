@@ -5,6 +5,7 @@ import {
   ComposedChart,
   Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -51,6 +52,25 @@ type AssessmentMetricConfig = {
 type StateByAssessment<T> = Record<AssessmentType, T>;
 
 type AudioClipWithUrl = AudioRecord["clips"][number] & { url: string };
+
+type DetailChartSeries = {
+  key: string;
+  label: string;
+  color: string;
+  yAxisId?: "left" | "right";
+};
+
+type DetailChartDefinition = {
+  title: string;
+  description: string;
+  data: Array<Record<string, number | string | null>>;
+  xAxisKey: string;
+  xAxisType: "number" | "category";
+  xAxisTickFormatter?: (value: number | string) => string;
+  tooltipLabelFormatter?: (value: number | string) => string;
+  series: DetailChartSeries[];
+  showRightAxis?: boolean;
+};
 
 const assessmentOrder: AssessmentType[] = [
   "ptosis",
@@ -197,6 +217,210 @@ function createDetailText(record: TimeSeriesRecord) {
     );
   });
   return rows.join("\n");
+}
+
+function formatChartNumber(value: number) {
+  if (!Number.isFinite(value)) {
+    return String(value);
+  }
+  if (Math.abs(value) >= 100) {
+    return value.toFixed(0);
+  }
+  if (Math.abs(value) >= 10) {
+    return value.toFixed(1);
+  }
+  return value.toFixed(2);
+}
+
+function buildElapsedSeriesData(
+  record: TimeSeriesRecord,
+  mapEntry: (entry: TimeSeriesEntry, index: number) => Record<string, number | null>
+) {
+  const firstTimestamp = record.frameData[0]?.timestamp ?? 0;
+  return record.frameData.map((entry, index) => ({
+    elapsedSec: Number(((entry.timestamp - firstTimestamp) / 1000).toFixed(2)),
+    ...mapEntry(entry, index)
+  }));
+}
+
+function getVoiceTaskLabels(record: TimeSeriesRecord) {
+  const rawTasks = record.details?.tasks;
+  if (!Array.isArray(rawTasks)) {
+    return [];
+  }
+  return rawTasks.map((task, index) => {
+    if (
+      task &&
+      typeof task === "object" &&
+      "label" in task &&
+      typeof task.label === "string"
+    ) {
+      return task.label;
+    }
+    return `タスク ${index + 1}`;
+  });
+}
+
+function getDetailChartDefinition(
+  type: AssessmentType,
+  record: TimeSeriesRecord
+): DetailChartDefinition | null {
+  if (record.frameData.length === 0) {
+    return null;
+  }
+
+  if (type === "ptosis") {
+    return {
+      title: "EAR の推移",
+      description: "有効計測時間内の左右 EAR の変化を確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        earLeft: entry.earLeft ?? null,
+        earRight: entry.earRight ?? null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      series: [
+        { key: "earLeft", label: "左EAR", color: "#1f8b86" },
+        { key: "earRight", label: "右EAR", color: "#0e2c2e" }
+      ]
+    };
+  }
+
+  if (type === "limbs") {
+    return {
+      title: "腕角度の推移",
+      description: "計測中の左右の腕角度を時系列で確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        armLeftDeg: entry.armLeftDeg ?? null,
+        armRightDeg: entry.armRightDeg ?? null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      series: [
+        { key: "armLeftDeg", label: "左腕角度", color: "#1f8b86" },
+        { key: "armRightDeg", label: "右腕角度", color: "#0e2c2e" }
+      ]
+    };
+  }
+
+  if (type === "gait") {
+    const hasKneeSeries = record.frameData.some(
+      (entry) =>
+        typeof entry.kneeLeftDeg === "number" ||
+        typeof entry.kneeRightDeg === "number"
+    );
+
+    if (hasKneeSeries) {
+      return {
+        title: "膝角度の推移",
+        description: "歩行中の左右膝角度の変化を確認できます。",
+        data: buildElapsedSeriesData(record, (entry) => ({
+          kneeLeftDeg: entry.kneeLeftDeg ?? null,
+          kneeRightDeg: entry.kneeRightDeg ?? null
+        })),
+        xAxisKey: "elapsedSec",
+        xAxisType: "number",
+        xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+        tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+        series: [
+          { key: "kneeLeftDeg", label: "左膝角度", color: "#1f8b86" },
+          { key: "kneeRightDeg", label: "右膝角度", color: "#0e2c2e" }
+        ]
+      };
+    }
+
+    return {
+      title: "歩行速度の推移",
+      description: "歩行セッション内の速度変化を確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        gaitSpeed: entry.gaitSpeed ?? null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      series: [{ key: "gaitSpeed", label: "歩行速度", color: "#0e2c2e" }]
+    };
+  }
+
+  if (type === "posture") {
+    return {
+      title: "姿勢指標の推移",
+      description: "正面・側面計測中の姿勢指標の変化を確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        lateralTiltDeg: entry.lateralTiltDeg ?? null,
+        trunkFlexionDeg: entry.trunkFlexionDeg ?? null,
+        droppedHeadDeg: entry.droppedHeadDeg ?? null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      series: [
+        { key: "lateralTiltDeg", label: "側方偏位", color: "#1f8b86" },
+        { key: "trunkFlexionDeg", label: "体幹前傾", color: "#0e2c2e" },
+        { key: "droppedHeadDeg", label: "首下がり", color: "#5db7af" }
+      ]
+    };
+  }
+
+  if (type === "expression") {
+    return {
+      title: "表情指標の推移",
+      description: "表情計測中の左右口角と対称性の変化を確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        smileLeftPct:
+          typeof entry.smileLeft === "number" ? entry.smileLeft * 100 : null,
+        smileRightPct:
+          typeof entry.smileRight === "number" ? entry.smileRight * 100 : null,
+        smileSymmetryPct:
+          typeof entry.smileSymmetry === "number"
+            ? entry.smileSymmetry * 100
+            : null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      series: [
+        { key: "smileLeftPct", label: "左口角", color: "#1f8b86" },
+        { key: "smileRightPct", label: "右口角", color: "#0e2c2e" },
+        { key: "smileSymmetryPct", label: "対称性", color: "#5db7af" }
+      ]
+    };
+  }
+
+  if (type === "voice") {
+    const taskLabels = getVoiceTaskLabels(record);
+    return {
+      title: "音声タスク別の結果",
+      description: "各音声タスクの平均音量と平均ピッチを確認できます。",
+      data: record.frameData.map((entry, index) => ({
+        taskLabel: taskLabels[index] ?? `タスク ${index + 1}`,
+        voiceRms: entry.voiceRms ?? null,
+        voicePitchHz: entry.voicePitchHz ?? null
+      })),
+      xAxisKey: "taskLabel",
+      xAxisType: "category",
+      tooltipLabelFormatter: (value) => String(value),
+      showRightAxis: true,
+      series: [
+        { key: "voiceRms", label: "平均音量", color: "#1f8b86", yAxisId: "left" },
+        {
+          key: "voicePitchHz",
+          label: "平均ピッチ",
+          color: "#0e2c2e",
+          yAxisId: "right"
+        }
+      ]
+    };
+  }
+
+  return null;
 }
 
 const metricConfigsByType: Record<AssessmentType, AssessmentMetricConfig[]> = {
@@ -461,6 +685,44 @@ function GraphTooltip({
   );
 }
 
+function DetailChartTooltip({
+  active,
+  payload,
+  label,
+  labelFormatter
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number | null }>;
+  label?: string | number;
+  labelFormatter?: (value: number | string) => string;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const filteredPayload = payload.filter(
+    (item) => typeof item.value === "number" && Number.isFinite(item.value)
+  );
+
+  if (filteredPayload.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="records-tooltip">
+      <p className="records-tooltip-title">
+        {labelFormatter ? labelFormatter(label ?? "") : String(label ?? "")}
+      </p>
+      {filteredPayload.map((item) => (
+        <p key={item.name} className="records-tooltip-row">
+          <span>{item.name}</span>
+          <strong>{formatChartNumber(item.value as number)}</strong>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function DetailPanel({
   session,
   record,
@@ -476,6 +738,8 @@ function DetailPanel({
   isRecordLoading: boolean;
   isAssetLoading: boolean;
 }) {
+  const detailChart = record ? getDetailChartDefinition(session.type, record) : null;
+
   return (
     <div className="records-detail">
       <div className="records-detail-header">
@@ -506,6 +770,68 @@ function DetailPanel({
 
       {isRecordLoading ? (
         <p className="records-detail-empty">詳細データを読み込んでいます。</p>
+      ) : record && detailChart ? (
+        <div className="records-detail-chart">
+          <div className="records-detail-chart-header">
+            <h3>{detailChart.title}</h3>
+            <p>{detailChart.description}</p>
+          </div>
+          <div className="records-detail-chart-frame">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart
+                data={detailChart.data}
+                margin={{ top: 12, right: 16, bottom: 0, left: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#d7ebe5" />
+                <XAxis
+                  dataKey={detailChart.xAxisKey}
+                  type={detailChart.xAxisType}
+                  stroke="#5d7b7d"
+                  tickLine={false}
+                  tickFormatter={detailChart.xAxisTickFormatter}
+                  domain={detailChart.xAxisType === "number" ? ["dataMin", "dataMax"] : undefined}
+                />
+                <YAxis
+                  yAxisId="left"
+                  stroke="#5d7b7d"
+                  tickLine={false}
+                  width={56}
+                />
+                {detailChart.showRightAxis ? (
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#5d7b7d"
+                    tickLine={false}
+                    width={56}
+                  />
+                ) : null}
+                <Tooltip
+                  content={
+                    <DetailChartTooltip
+                      labelFormatter={detailChart.tooltipLabelFormatter}
+                    />
+                  }
+                />
+                <Legend />
+                {detailChart.series.map((series) => (
+                  <Line
+                    key={series.key}
+                    type="monotone"
+                    dataKey={series.key}
+                    name={series.label}
+                    stroke={series.color}
+                    strokeWidth={2.4}
+                    dot={false}
+                    connectNulls={false}
+                    yAxisId={series.yAxisId ?? "left"}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       ) : record ? (
         <pre className="detail-pre">{createDetailText(record)}</pre>
       ) : (
