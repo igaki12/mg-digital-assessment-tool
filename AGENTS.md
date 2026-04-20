@@ -223,9 +223,9 @@
     *   `stopStream()` では track 停止に加えて `video.pause()` と `video.srcObject = null` を行い、再計測ごとに run id を切り替えて古い非同期処理を無効化する。
     *   `detectForVideo` 実行前に `readyState`、`videoWidth`、`videoHeight`、stream の active 状態を確認し、未準備フレームでは推論しない。
 10. **Ptosis 画面のフェーズ表示とオーバーレイについて:**
-    *   眼瞼下垂テストでは、カメラ上部の文言オーバーレイを廃止し、フェーズ表示カード本体をカメラ上部へ重ねて表示する。
-    *   `CameraOverlay` の上部は Ptosis では音声アイコンのみ残し、フェーズ名は `topLabel` に近い小さなラベル表現で表示する。
-    *   フェーズバナーの背景は黒基調の半透明ガラス風とし、カメラ上のオーバーレイデザインに合わせる。
+    *   眼瞼下垂テストでは、Ptosis 専用のフェーズ表示 DOM を別途重ねず、`CameraOverlay` の `topLabel` / `topMessage` にフェーズ名と状態文言を渡して上部表示を統一する。
+    *   旧 `ptosis-phase-overlay` / `phase-banner` のような個別オーバーレイは廃止し、上部ガイド表示は `CameraOverlay` 側の共通 UI に寄せる。
+    *   Ptosis の上部表示も他のカメラ検査と同じ黒基調の半透明ガラス風オーバーレイに揃える。
 11. **モバイル測定画面の camera-sidebar について:**
     *   `camera-sidebar` はモバイル端末でも画面下部固定にしない。通常フロー内に配置し、小さめの `margin-top` でカメラ直下へ続けて表示する。
     *   理由は、一部モバイル環境で固定レイヤーがカメラ許可導線に干渉したため。
