@@ -420,7 +420,7 @@ export default function Dashboard() {
             <p className="eyebrow">MG Digital Assessment Tool</p>
             <h1>毎日の変化を、<br/>可視化して管理する</h1>
             <p className="hero-copy">
-              眼瞼下垂・上肢・歩行・問診の結果を、端末内で安全に記録します。<br/>
+              眼瞼下垂・上肢・歩行・姿勢・表情・音声・問診の結果を、端末内で安全に記録します。<br/>
               より良い治療方針の決定をサポートする、次世代の評価ツールです。
             </p>
             <div className="dashboard-hero-actions">
@@ -460,7 +460,7 @@ export default function Dashboard() {
           to="/assessments"
         >
           <h2>検査メニュー</h2>
-          <p>眼・腕・歩行・問診を順番に確認できます。</p>
+          <p>眼・腕・歩行・姿勢・表情・音声・問診を順番に確認できます。</p>
           <span className="text-link">メニューへ</span>
         </Link>
         <Link className="card card-link dashboard-card fade-in-up delay-4" to="/records">
