@@ -140,7 +140,7 @@ export default function GaitAssessment() {
     startRecorder(stream);
     updatePhase("measuring");
     setStatusText("記録を開始しました。全身が映る範囲で、いつも通り歩いてください。");
-    void announcementController.play("common.autoTrigger");
+    void announcementController.play("gait.recordingStart");
   }, [startRecorder, updatePhase]);
 
   const tick = useCallback(
@@ -312,6 +312,7 @@ export default function GaitAssessment() {
       }
       updatePhase("waiting");
       setStatusText("全身が画面に収まる位置に立つと、記録を開始します。");
+      void announcementController.interruptAndPlay("gait.start");
       frameRef.current = requestAnimationFrame(() => {
         void tick(runId);
       });

@@ -26,6 +26,7 @@ class AnnouncementController {
   private gainNode: GainNode | null = null;
   private currentAudio: HTMLAudioElement | null = null;
   private currentSource: MediaElementAudioSourceNode | null = null;
+  private currentPlaybackResolver: ((completed: boolean) => void) | null = null;
   private currentKey: AnnouncementKey | null = null;
   private isPlaying = false;
   private volume = DEFAULT_ANNOUNCEMENT_VOLUME;
@@ -172,7 +173,19 @@ class AnnouncementController {
     this.lastPlayedAt.set(key, now);
     this.emitState();
 
-    const clear = () => {
+    const finishPlayback = (completed: boolean) => {
+      if (this.currentPlaybackResolver) {
+        const resolve = this.currentPlaybackResolver;
+        this.currentPlaybackResolver = null;
+        resolve(completed);
+      }
+    };
+
+    const playbackCompleted = new Promise<boolean>((resolve) => {
+      this.currentPlaybackResolver = resolve;
+    });
+
+    const clear = (completed: boolean) => {
       if (this.currentSource) {
         this.currentSource.disconnect();
         this.currentSource = null;
@@ -183,10 +196,11 @@ class AnnouncementController {
       }
       this.isPlaying = false;
       this.emitState();
+      finishPlayback(completed);
     };
 
-    audio.addEventListener("ended", clear, { once: true });
-    audio.addEventListener("error", clear, { once: true });
+    audio.addEventListener("ended", () => clear(true), { once: true });
+    audio.addEventListener("error", () => clear(false), { once: true });
 
     try {
       const context = await this.resumeAudioContext();
@@ -199,14 +213,14 @@ class AnnouncementController {
       await audio.play();
       this.isPlaying = true;
       this.emitState();
-      return true;
+      return await playbackCompleted;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        clear();
+        clear(false);
         return false;
       }
       console.warn("Failed to play announcement", key, error);
-      clear();
+      clear(false);
       return false;
     }
   }
@@ -222,6 +236,11 @@ class AnnouncementController {
         this.isPlaying = false;
         this.emitState();
       }
+      if (this.currentPlaybackResolver) {
+        const resolve = this.currentPlaybackResolver;
+        this.currentPlaybackResolver = null;
+        resolve(false);
+      }
       return;
     }
     this.currentAudio.pause();
@@ -234,6 +253,11 @@ class AnnouncementController {
     this.currentKey = null;
     this.isPlaying = false;
     this.emitState();
+    if (this.currentPlaybackResolver) {
+      const resolve = this.currentPlaybackResolver;
+      this.currentPlaybackResolver = null;
+      resolve(false);
+    }
   }
 }
 

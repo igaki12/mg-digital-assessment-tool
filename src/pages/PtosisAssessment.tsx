@@ -116,6 +116,7 @@ export default function PtosisAssessment() {
     setElapsed(0);
     updatePhase("measuring");
     setStatusText("良い位置です。30秒間、そのまま上を見てください。");
+    void announcementController.play("ptosis.hold");
     measurementTimersRef.current.progress10 = window.setTimeout(() => {
       progressCueRef.current.ten = true;
       void announcementController.interruptAndPlay("ptosis.progress10");

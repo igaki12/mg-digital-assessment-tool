@@ -93,6 +93,7 @@ export default function LimbAssessment() {
     if (running) {
       return;
     }
+    announcementController.enableAutoplay();
     announcementController.stopCurrent();
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
@@ -114,6 +115,12 @@ export default function LimbAssessment() {
     startTimeRef.current = Date.now();
     setDuration(0);
     setRunning(true);
+    void (async () => {
+      const completed = await announcementController.interruptAndPlay("limbs.start");
+      if (completed) {
+        await announcementController.play("limbs.positioning");
+      }
+    })();
     frameRef.current = requestAnimationFrame(tick);
   }, [running, tick]);
 
@@ -142,7 +149,10 @@ export default function LimbAssessment() {
   }, [stopStream]);
 
   useEffect(() => {
-    return () => stopStream();
+    return () => {
+      stopStream();
+      announcementController.stopCurrent();
+    };
   }, [stopStream]);
 
   useEffect(() => {
