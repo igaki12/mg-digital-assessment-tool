@@ -90,31 +90,6 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <style>{`
-        .button-row-right {
-          display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
-          width: 100%;
-        }
-        .icon-close-button {
-          background: rgba(0, 0, 0, 0.05);
-          border: none;
-          border-radius: 50%;
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: inherit;
-          cursor: pointer;
-          transition: background 0.2s;
-          flex-shrink: 0;
-        }
-        .icon-close-button:hover {
-          background: rgba(0, 0, 0, 0.1);
-        }
-      `}</style>
       <main className="login-shell">
         <section className="login-brand">
           <h1 className="login-product-title">
