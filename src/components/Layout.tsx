@@ -1,14 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const isHome = location.pathname === "/";
 
   useEffect(() => {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
+
+  function handleLogout() {
+    logout();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <div className="app">
@@ -62,12 +70,15 @@ export default function Layout({ children }: { children: ReactNode }) {
           >
             設定
           </NavLink>
+          <button type="button" className="nav-link nav-logout-button" onClick={handleLogout}>
+            ログアウト
+          </button>
         </nav>
       </header>
       <main className="app-main">{children}</main>
       <footer className={isHome ? "app-footer" : "app-footer app-footer-mobile-hidden"}>
         <p>
-          すべての解析は端末内で完結します。医療判断は必ず医師へ相談してください。
+          測定データは、個人情報保護を徹底した上で診療・研究に利用されます。医療判断は必ず医師へ相談してください。
         </p>
       </footer>
     </div>

@@ -15,7 +15,7 @@ export default function Settings() {
 
   const clearData = async () => {
     await clearAllData();
-    setMessage("ローカルデータを削除しました。");
+    setMessage("端末内に残る一時データ・キャッシュを削除しました。");
   };
 
   return (
@@ -45,7 +45,7 @@ export default function Settings() {
 
       <section className="card danger">
         <h2>データ削除</h2>
-        <p>端末内に保存された測定データと動画を削除します。</p>
+        <p>端末内に残る一時データ・キャッシュと動画を削除します。</p>
         <div className="button-row">
           <button className="ghost-button" onClick={clearData}>
             すべて削除

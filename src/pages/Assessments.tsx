@@ -23,6 +23,13 @@ const cards = [
       "カメラの前に立つと録画が始まります。いつも通り歩いてください。"
   },
   {
+    to: "/tug",
+    title: "3m立ち上がり歩行テスト",
+    subtitle: "3m Stand-up Walk",
+    description:
+      "椅子から立ち上がり、3m先で方向転換して戻って座るまでを記録します。"
+  },
+  {
     to: "/posture",
     title: "姿勢の検査",
     subtitle: "Posture",

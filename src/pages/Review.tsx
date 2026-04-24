@@ -38,6 +38,7 @@ const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  tug: "3m立ち上がり歩行テスト",
   posture: "姿勢の検査",
   expression: "表情の検査",
   voice: "音声の検査",
@@ -51,14 +52,7 @@ type SyncCandidate = {
   dataPoints: number;
 };
 
-type UploadPhase = "idle" | "authing" | "ready" | "uploading" | "success";
-
-type LoginFormState = {
-  email: string;
-  password: string;
-  rememberLogin: boolean;
-  agreedToTerms: boolean;
-};
+type UploadPhase = "idle" | "ready" | "uploading" | "success";
 
 const uploadSteps = ["準備中", "暗号化中", "アップロード中", "完了処理中"] as const;
 const uploadStepDurations = [700, 900, 1400, 800] as const;
@@ -95,17 +89,9 @@ export default function Review() {
   const [syncedSessionIds, setSyncedSessionIds] = useState<number[]>([]);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase>("idle");
   const [activeUploadStep, setActiveUploadStep] = useState(-1);
-  const [loginForm, setLoginForm] = useState<LoginFormState>({
-    email: "",
-    password: "",
-    rememberLogin: false,
-    agreedToTerms: false
-  });
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [lastSyncSummary, setLastSyncSummary] = useState<string | null>(null);
-  const [showTermsModal, setShowTermsModal] = useState(false);
   const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -114,21 +100,6 @@ export default function Review() {
       mountedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!showTermsModal) {
-      return;
-    }
-    const { body, documentElement } = document;
-    const originalBodyOverflow = body.style.overflow;
-    const originalHtmlOverflow = documentElement.style.overflow;
-    body.style.overflow = "hidden";
-    documentElement.style.overflow = "hidden";
-    return () => {
-      body.style.overflow = originalBodyOverflow;
-      documentElement.style.overflow = originalHtmlOverflow;
-    };
-  }, [showTermsModal]);
 
   useEffect(() => {
     let active = true;
@@ -221,52 +192,8 @@ export default function Review() {
     [syncedVideoCandidates]
   );
   const canSubmit =
-    Boolean(isLoggedIn) &&
-    Boolean(loginForm.agreedToTerms) &&
     unsyncedCandidates.length > 0 &&
-    uploadPhase !== "authing" &&
     uploadPhase !== "uploading";
-
-  async function handleLogin() {
-    if (!loginForm.email.trim() || !loginForm.password.trim()) {
-      setStatusMessage("メールアドレスとパスワードを入力してください。");
-      return;
-    }
-    setActiveUploadStep(-1);
-    setUploadPhase("authing");
-    setStatusMessage("医療機関ポータルへ接続しています。");
-    await wait(520);
-    if (!mountedRef.current) {
-      return;
-    }
-    setIsLoggedIn(true);
-    setUploadPhase("ready");
-    setStatusMessage(
-      loginForm.rememberLogin
-        ? "ログインを確認しました。このデモでは再読込後に状態がリセットされます。"
-        : "ログインを確認しました。"
-    );
-  }
-
-  function handleLogout() {
-    setIsLoggedIn(false);
-    setUploadPhase("idle");
-    setActiveUploadStep(-1);
-    setStatusMessage("ログアウトしました。");
-  }
-
-  function clearCredentials() {
-    setLoginForm((prev) => ({
-      ...prev,
-      email: "",
-      password: "",
-      rememberLogin: false
-    }));
-    setIsLoggedIn(false);
-    setUploadPhase("idle");
-    setActiveUploadStep(-1);
-    setStatusMessage("入力内容をクリアしました。");
-  }
 
   async function handleSubmit() {
     if (!canSubmit) {
@@ -312,14 +239,14 @@ export default function Review() {
     <Layout>
       <section className="page-header">
         <h1>医師共有</h1>
-        <p>端末内の測定データを、必要なタイミングで医師向けクラウドへ送信するダミー画面です。</p>
+        <p>測定データを医師向けクラウドへ送信する想定の確認画面です。</p>
       </section>
 
       <section className="sync-banner card">
-        <p className="sync-banner-eyebrow">Demo Sync Mode</p>
-        <h2>実サーバー送信は行いません</h2>
+        <p className="sync-banner-eyebrow">Development Sync Mode</p>
+        <h2>開発版では送信処理をダミー表示しています</h2>
         <p>
-          このページは送信前チェック、ローディング表示、同期済み動画の整理動線を確認するためのダミー実装です。
+          実運用では個人情報保護を徹底した上でサーバー送信・保管する前提です。この開発版では送信前チェック、ローディング表示、同期済み動画の整理動線を確認できます。
         </p>
       </section>
 
@@ -343,133 +270,6 @@ export default function Review() {
           value={lastSyncAt ? formatDate(lastSyncAt) : "未送信"}
           note={lastSyncSummary ?? "まだクラウド送信は行われていません。"}
         />
-      </section>
-
-      <section className="card sync-auth-card">
-        <div className="sync-card-header">
-          <div>
-            <h2>送信前チェック</h2>
-            <p>データ送信時のみログインが必要です。任意の値でダミーログインできます。</p>
-          </div>
-          <div className={isLoggedIn ? "sync-login-badge is-active" : "sync-login-badge"}>
-            {isLoggedIn ? "ログイン済み" : "未ログイン"}
-          </div>
-        </div>
-
-        <div className="sync-auth-grid">
-          <label className="sync-field">
-            <span>メールアドレス</span>
-            <input
-              className="sync-input"
-              type="email"
-              placeholder="doctor@example.jp"
-              value={loginForm.email}
-              onChange={(event) =>
-                setLoginForm((prev) => ({ ...prev, email: event.target.value }))
-              }
-              disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-            />
-          </label>
-
-          <label className="sync-field">
-            <span>パスワード</span>
-            <input
-              className="sync-input"
-              type="password"
-              placeholder="8文字以上"
-              value={loginForm.password}
-              onChange={(event) =>
-                setLoginForm((prev) => ({
-                  ...prev,
-                  password: event.target.value
-                }))
-              }
-              disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-            />
-          </label>
-        </div>
-
-        <div className="sync-checkbox-group">
-          <label className="sync-checkbox-row">
-            <input
-              type="checkbox"
-              checked={loginForm.rememberLogin}
-              onChange={(event) =>
-                setLoginForm((prev) => ({
-                  ...prev,
-                  rememberLogin: event.target.checked
-                }))
-              }
-              disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-            />
-            <span>ログイン状態を保持する</span>
-          </label>
-
-          <div className="sync-checkbox-row sync-checkbox-split">
-            <label className="sync-checkbox-label">
-              <input
-                type="checkbox"
-                checked={loginForm.agreedToTerms}
-                onChange={(event) =>
-                  setLoginForm((prev) => ({
-                    ...prev,
-                    agreedToTerms: event.target.checked
-                  }))
-                }
-                disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-              />
-              <span>利用規約に同意する</span>
-            </label>
-            <button
-              type="button"
-              className="sync-inline-link"
-              onClick={() => setShowTermsModal(true)}
-            >
-              利用規約を開く
-            </button>
-          </div>
-        </div>
-
-        <div className="button-row">
-          {!isLoggedIn ? (
-            <PrimaryButton
-              type="button"
-              onClick={handleLogin}
-              disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-            >
-              {uploadPhase === "authing" ? (
-                <span className="button-spinner-wrap">
-                  <span className="spinner spinner-on-button" aria-hidden="true" />
-                  ログイン確認中
-                </span>
-              ) : (
-                "ログインして送信準備をする"
-              )}
-            </PrimaryButton>
-          ) : (
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={handleLogout}
-              disabled={uploadPhase === "uploading"}
-            >
-              ログアウト
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={clearCredentials}
-            disabled={uploadPhase === "authing" || uploadPhase === "uploading"}
-          >
-            入力をクリア
-          </button>
-        </div>
-
-        <p className="sync-reset-note">
-          「ログイン状態を保持する」を選んでも、このデモでは再読込で状態がリセットされます。
-        </p>
       </section>
 
       <section className="review-workspace">
@@ -501,12 +301,6 @@ export default function Review() {
           </div>
 
           <div className="sync-callout-row">
-            {!isLoggedIn ? (
-              <p className="sync-hint">送信前にログインが必要です。</p>
-            ) : null}
-            {isLoggedIn && !loginForm.agreedToTerms ? (
-              <p className="sync-hint">送信前に利用規約への同意が必要です。</p>
-            ) : null}
             {syncedVideoCandidates.length === 0 ? (
               <p className="sync-hint">削除できる同期済み動画はまだありません。</p>
             ) : null}
@@ -649,74 +443,6 @@ export default function Review() {
         </div>
       </section>
 
-      {showTermsModal ? (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onClick={() => setShowTermsModal(false)}
-        >
-          <div
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="terms-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="sync-card-header">
-              <div>
-                <p className="sync-banner-eyebrow">Terms</p>
-                <h2 id="terms-modal-title">医師共有デモ利用規約</h2>
-              </div>
-              <button
-                type="button"
-                className="ghost-button"
-                onClick={() => setShowTermsModal(false)}
-              >
-                閉じる
-              </button>
-            </div>
-
-            <div className="terms-body">
-              <section>
-                <h3>1. 送信データの範囲</h3>
-                <p>
-                  共有対象には測定メタデータ、時系列数値、動画が含まれる想定です。この画面では送信先を持たず、送信完了表示のみ再現します。
-                </p>
-              </section>
-              <section>
-                <h3>2. 医療判断ではありません</h3>
-                <p>
-                  本アプリの出力は診療補助を想定した参考情報です。診断や治療方針の決定は、必ず医師による確認を前提とします。
-                </p>
-              </section>
-              <section>
-                <h3>3. 端末保存と削除</h3>
-                <p>
-                  データは端末内に保存されます。同期済み動画の削除を実行すると、動画のみが端末から消去され、数値データと履歴は保持されます。
-                </p>
-              </section>
-              <section>
-                <h3>4. デモ送信について</h3>
-                <p>
-                  この同期画面は UI 検証用のダミーであり、実ネットワーク通信や正式な認証は実施しません。表示上の待機時間とローディングのみ提供します。
-                </p>
-              </section>
-            </div>
-
-            <div className="button-row">
-              <PrimaryButton
-                type="button"
-                onClick={() => {
-                  setLoginForm((prev) => ({ ...prev, agreedToTerms: true }));
-                  setShowTermsModal(false);
-                }}
-              >
-                同意して閉じる
-              </PrimaryButton>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </Layout>
   );
 }

@@ -21,6 +21,7 @@ const typeLabels: Record<SessionMeta["type"], string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  tug: "3m立ち上がり歩行テスト",
   posture: "姿勢の検査",
   expression: "表情の検査",
   voice: "音声の検査",
@@ -420,7 +421,7 @@ export default function Dashboard() {
             <p className="eyebrow">MG Digital Assessment Tool</p>
             <h1>毎日の変化を、<br/>可視化して管理する</h1>
             <p className="hero-copy">
-              眼瞼下垂・上肢・歩行・姿勢・表情・音声・問診の結果を、端末内で安全に記録します。<br/>
+              眼瞼下垂・上肢・歩行・姿勢・表情・音声・問診の結果を、個人情報保護を徹底した上で診療・研究に活用します。<br/>
               より良い治療方針の決定をサポートする、次世代の評価ツールです。
             </p>
             <div className="dashboard-hero-actions">

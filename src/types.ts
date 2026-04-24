@@ -2,6 +2,7 @@ export type AssessmentType =
   | "ptosis"
   | "limbs"
   | "gait"
+  | "tug"
   | "posture"
   | "expression"
   | "voice"
@@ -24,6 +25,9 @@ export type TimeSeriesEntry = {
   kneeLeftDeg?: number;
   kneeRightDeg?: number;
   gaitSpeed?: number;
+  tugElapsedSec?: number;
+  tugStepCount?: number;
+  tugPhase?: "standingUp" | "walkOut" | "turning" | "returning" | "sittingDown";
   trunkFlexionDeg?: number;
   droppedHeadDeg?: number;
   lateralTiltDeg?: number;

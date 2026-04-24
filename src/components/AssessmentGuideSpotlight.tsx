@@ -5,6 +5,7 @@ type AssessmentType =
   | "ptosis"
   | "limbs"
   | "gait"
+  | "tug"
   | "posture"
   | "expression"
   | "voice"
@@ -14,6 +15,7 @@ const typeLabels: Record<AssessmentType, string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  tug: "3m立ち上がり歩行テスト",
   posture: "姿勢の検査",
   expression: "表情の検査",
   voice: "音声の検査",
@@ -61,6 +63,16 @@ const assessmentSpotlights: Record<
     checks: ["推定歩行速度", "膝関節の曲がり", "姿勢と移動の安定性"],
     accent: "linear-gradient(135deg, #124a78 0%, #1f7ec8 46%, #95d5ff 100%)",
     to: "/gait"
+  },
+  tug: {
+    title: "3m立ち上がり歩行テスト",
+    tagline: "立ち上がり、歩行、方向転換、着座までの一連の動作を記録します。",
+    description:
+      "椅子から立ち上がり、3m先で方向転換して戻って座るまでを動画と骨格推定で記録します。合計時間、歩数、膝角度、推定歩行速度を診察時の参考として確認できるようにします。",
+    tools: ["Pose Landmarker", "3m歩行時間計測", "背面カメラ"],
+    checks: ["合計時間", "歩数", "膝角度と推定歩行速度"],
+    accent: "linear-gradient(135deg, #533f93 0%, #7c67c8 48%, #c7bdff 100%)",
+    to: "/tug"
   },
   posture: {
     title: "姿勢の検査",

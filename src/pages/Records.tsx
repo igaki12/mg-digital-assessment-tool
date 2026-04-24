@@ -76,6 +76,7 @@ const assessmentOrder: AssessmentType[] = [
   "ptosis",
   "limbs",
   "gait",
+  "tug",
   "posture",
   "expression",
   "voice",
@@ -86,6 +87,7 @@ const typeLabels: Record<AssessmentType, string> = {
   ptosis: "眼瞼下垂",
   limbs: "上肢の筋力",
   gait: "歩行動作",
+  tug: "3m立ち上がり歩行テスト",
   posture: "姿勢の検査",
   expression: "表情の検査",
   voice: "音声の検査",
@@ -96,6 +98,7 @@ const defaultMetricByType: StateByAssessment<string> = {
   ptosis: "avgEar",
   limbs: "avgShoulder",
   gait: "gaitSpeed",
+  tug: "totalDuration",
   posture: "postureScore",
   expression: "smileAmplitude",
   voice: "voiceRms",
@@ -106,6 +109,7 @@ const defaultGraphModeByType: StateByAssessment<GraphMode> = {
   ptosis: "daily",
   limbs: "daily",
   gait: "daily",
+  tug: "daily",
   posture: "daily",
   expression: "daily",
   voice: "daily",
@@ -116,6 +120,7 @@ const defaultGranularityByType: StateByAssessment<MetricGranularity> = {
   ptosis: "day",
   limbs: "day",
   gait: "day",
+  tug: "day",
   posture: "day",
   expression: "day",
   voice: "day",
@@ -368,6 +373,30 @@ function getDetailChartDefinition(
     };
   }
 
+  if (type === "tug") {
+    return {
+      title: "3m立ち上がり歩行指標の推移",
+      description: "計測中の速度、膝角度、歩数の変化を確認できます。",
+      data: buildElapsedSeriesData(record, (entry) => ({
+        gaitSpeed: entry.gaitSpeed ?? null,
+        kneeLeftDeg: entry.kneeLeftDeg ?? null,
+        kneeRightDeg: entry.kneeRightDeg ?? null,
+        tugStepCount: entry.tugStepCount ?? null
+      })),
+      xAxisKey: "elapsedSec",
+      xAxisType: "number",
+      xAxisTickFormatter: (value) => `${Number(value).toFixed(0)}秒`,
+      tooltipLabelFormatter: (value) => `${Number(value).toFixed(1)}秒`,
+      showRightAxis: true,
+      series: [
+        { key: "gaitSpeed", label: "歩行速度", color: "#1f8b86", yAxisId: "left" },
+        { key: "kneeLeftDeg", label: "左膝角度", color: "#0e2c2e", yAxisId: "right" },
+        { key: "kneeRightDeg", label: "右膝角度", color: "#5db7af", yAxisId: "right" },
+        { key: "tugStepCount", label: "歩数", color: "#7c67c8", yAxisId: "left" }
+      ]
+    };
+  }
+
   if (type === "posture") {
     return {
       title: "姿勢指標の推移",
@@ -538,6 +567,60 @@ const metricConfigsByType: Record<AssessmentType, AssessmentMetricConfig[]> = {
       unit: "°",
       getValue: (_, record) =>
         averageEntryValue(record, (entry) => entry.trunkFlexionDeg)
+    }
+  ],
+  tug: [
+    {
+      id: "totalDuration",
+      label: "合計時間",
+      digits: 1,
+      unit: "秒",
+      getValue: (session, record) =>
+        getDetailNumber(record, "totalDurationSec") ??
+        (typeof session.summaryScore === "number" ? session.summaryScore : null)
+    },
+    {
+      id: "standUpSec",
+      label: "立ち上がり時間",
+      digits: 1,
+      unit: "秒",
+      getValue: (_, record) => getDetailNumber(record, "standUpSec")
+    },
+    {
+      id: "stepCount",
+      label: "歩数",
+      digits: 0,
+      unit: "歩",
+      getValue: (_, record) =>
+        getDetailNumber(record, "stepCount") ??
+        maxEntryValue(record, (entry) => entry.tugStepCount)
+    },
+    {
+      id: "avgGaitSpeed",
+      label: "平均歩行速度",
+      digits: 2,
+      unit: "m/s",
+      getValue: (_, record) =>
+        getDetailNumber(record, "avgGaitSpeed") ??
+        averageEntryValue(record, (entry) => entry.gaitSpeed)
+    },
+    {
+      id: "leftKnee",
+      label: "左膝角度",
+      digits: 1,
+      unit: "°",
+      getValue: (_, record) =>
+        getDetailNumber(record, "avgKneeLeftDeg") ??
+        averageEntryValue(record, (entry) => entry.kneeLeftDeg)
+    },
+    {
+      id: "rightKnee",
+      label: "右膝角度",
+      digits: 1,
+      unit: "°",
+      getValue: (_, record) =>
+        getDetailNumber(record, "avgKneeRightDeg") ??
+        averageEntryValue(record, (entry) => entry.kneeRightDeg)
     }
   ],
   posture: [
@@ -918,6 +1001,7 @@ export default function Records() {
     ptosis: null,
     limbs: null,
     gait: null,
+    tug: null,
     posture: null,
     expression: null,
     voice: null,
@@ -935,6 +1019,7 @@ export default function Records() {
     ptosis: false,
     limbs: false,
     gait: false,
+    tug: false,
     posture: false,
     expression: false,
     voice: false,
@@ -958,6 +1043,7 @@ export default function Records() {
         ptosis: [],
         limbs: [],
         gait: [],
+        tug: [],
         posture: [],
         expression: [],
         voice: [],
