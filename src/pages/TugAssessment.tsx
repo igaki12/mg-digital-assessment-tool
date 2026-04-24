@@ -4,6 +4,7 @@ import {
   PoseLandmarker,
   type PoseLandmarkerResult
 } from "@mediapipe/tasks-vision";
+import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
 import CameraOverlay from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
@@ -72,6 +73,7 @@ export default function TugAssessment() {
   const initialDirectionRef = useRef<number | null>(null);
   const maxDisplacementRef = useRef(0);
   const readyFramesRef = useRef(0);
+  const readyCuePlayedRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
   const standUpSecRef = useRef<number | null>(null);
   const turnSecRef = useRef<number | null>(null);
@@ -120,6 +122,7 @@ export default function TugAssessment() {
 
   const resetMeasurement = useCallback(() => {
     readyFramesRef.current = 0;
+    readyCuePlayedRef.current = false;
     lastHipRef.current = null;
     startHipRef.current = null;
     baselineRef.current = null;
@@ -196,6 +199,7 @@ export default function TugAssessment() {
     startRecorder(stream);
     updatePhase("measuring");
     setStatusText("3m立ち上がり歩行テストを計測中です。立ち上がり、3m先で方向転換し、戻って座ったら保存してください。");
+    void announcementController.interruptAndPlay("tug.measuring");
   }, [canStart, startRecorder, updatePhase]);
 
   const tick = useCallback(
@@ -293,6 +297,10 @@ export default function TugAssessment() {
             setCanStart(true);
             updatePhase("ready");
             setStatusText("全身を検出しました。準備ができたら計測開始を押してください。");
+            if (!readyCuePlayedRef.current) {
+              readyCuePlayedRef.current = true;
+              void announcementController.play("tug.ready", { cooldownMs: 6000 });
+            }
           }
         }
       } else if (currentPhase === "measuring" && startTimeRef.current) {
@@ -439,6 +447,7 @@ export default function TugAssessment() {
       }
       updatePhase("positioning");
       setStatusText("椅子に座った状態で、全身が画面に収まる位置に調整してください。");
+      void announcementController.interruptAndPlay("tug.positioning");
       frameRef.current = requestAnimationFrame(() => {
         void tick(runId);
       });
@@ -522,6 +531,7 @@ export default function TugAssessment() {
 
     updatePhase("idle");
     setStatusText("保存しました。再度3m立ち上がり歩行テストを行うこともできます。");
+    void announcementController.interruptAndPlay("tug.done");
     resetMeasurement();
   }, [finalizeRecorder, resetMeasurement, stopStream, updatePhase]);
 
@@ -584,17 +594,38 @@ export default function TugAssessment() {
       ) : null}
 
       {showIntroContent ? (
-        <section className="grid-2">
-          {[
-            "3mを測って床に線を引く",
-            "椅子を用意して座る",
-            "歩く範囲の荷物やコードをどける",
-            "ふらつきがある場合は家族や介助者が見守る"
-          ].map((item) => (
-            <div key={item} className="card tug-prep-card">
-              <strong>{item}</strong>
-            </div>
-          ))}
+        <AssessmentAudioGuide
+          announcementKey="pageIntro.tug"
+          summary="この検査では、椅子から立ち上がって3m先で方向転換し、戻って座るまでの動きを確認します。音量を調整してから始められます。"
+        />
+      ) : null}
+
+      {showIntroContent ? (
+        <section className="tug-prep-section">
+          <div className="grid-2">
+            {[
+              "3mを測って床に線を引く",
+              "椅子を用意して座る",
+              "歩く範囲の荷物やコードをどける",
+              "ふらつきがある場合は家族や介助者が見守る"
+            ].map((item) => (
+              <div key={item} className="card tug-prep-card">
+                <strong>{item}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="button-row">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                announcementController.enableAutoplay();
+                void announcementController.interruptAndPlay("tug.prep");
+              }}
+            >
+              準備案内を聞く
+            </button>
+          </div>
         </section>
       ) : null}
 

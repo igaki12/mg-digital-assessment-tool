@@ -285,6 +285,11 @@ p {
   align-items: center;
 }
 
+.tug-prep-section {
+  display: grid;
+  gap: 1rem;
+}
+
 .tug-prep-card strong {
   color: var(--ink);
 }
