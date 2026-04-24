@@ -89,87 +89,8 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page login-page-enhanced">
+    <div className="login-page">
       <style>{`
-        .login-page-enhanced {
-          background: radial-gradient(circle at top right, #0e1a1c 0%, #050a0a 100%);
-          min-height: 100vh;
-          color: #ffffff;
-        }
-        .login-page-enhanced .login-brand p,
-        .login-page-enhanced .login-brand h2 {
-          color: rgba(255, 255, 255, 0.8);
-        }
-        .login-title-ripple {
-          position: relative;
-          display: inline-block;
-          animation: titleRipple 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-          background: linear-gradient(180deg, #ffffff 0%, #a3f0d1 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          text-shadow: 0 4px 20px rgba(127, 214, 170, 0.2);
-        }
-        @keyframes titleRipple {
-          0% {
-            opacity: 0;
-            transform: translateY(30px);
-            filter: blur(10px);
-            clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
-          }
-          50% {
-            opacity: 0.6;
-            filter: blur(4px);
-            clip-path: polygon(0 40%, 100% 60%, 100% 100%, 0 100%);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-            filter: blur(0);
-            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-          }
-        }
-        .login-glass-card {
-          background: rgba(255, 255, 255, 0.05) !important;
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-          border-radius: 24px !important;
-        }
-        .login-glass-card label span {
-          color: rgba(255, 255, 255, 0.8) !important;
-        }
-        .login-glass-card .sync-input {
-          background: rgba(0, 0, 0, 0.3) !important;
-          border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          color: #fff !important;
-          border-radius: 12px !important;
-        }
-        .login-glass-card .sync-input:focus {
-          border-color: #7fd6aa !important;
-          box-shadow: 0 0 0 2px rgba(127, 214, 170, 0.2) !important;
-        }
-        .login-glass-card .sync-checkbox-row span {
-          color: rgba(255, 255, 255, 0.9) !important;
-        }
-        .login-glass-card .sync-inline-link {
-          color: #7fd6aa !important;
-        }
-        .modal-card-glass {
-          background: rgba(20, 30, 30, 0.85) !important;
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          color: #fff !important;
-        }
-        .modal-card-glass h2, .modal-card-glass .sync-banner-eyebrow {
-          color: #fff !important;
-        }
-        .modal-card-glass .terms-pre {
-          background: rgba(0, 0, 0, 0.3) !important;
-          color: rgba(255, 255, 255, 0.8) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
         .button-row-right {
           display: flex;
           justify-content: flex-end;
@@ -177,7 +98,7 @@ export default function Login() {
           width: 100%;
         }
         .icon-close-button {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.05);
           border: none;
           border-radius: 50%;
           width: 36px;
@@ -185,28 +106,18 @@ export default function Login() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #fff;
+          color: inherit;
           cursor: pointer;
           transition: background 0.2s;
           flex-shrink: 0;
         }
         .icon-close-button:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-        .modal-card-glass .ghost-button {
-          color: #fff !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-        }
-        .modal-card-glass .ghost-button:hover {
-          background: rgba(255, 255, 255, 0.2) !important;
-        }
-        .login-footer {
-          color: rgba(255, 255, 255, 0.4);
+          background: rgba(0, 0, 0, 0.1);
         }
       `}</style>
       <main className="login-shell">
         <section className="login-brand">
-          <h1 className="login-product-title login-title-ripple">
+          <h1 className="login-product-title">
             <span data-title="DigiNeuro Marker">DigiNeuro Marker</span>
           </h1>
           <p className="login-product-copy">
@@ -218,7 +129,7 @@ export default function Login() {
           </p>
         </section>
 
-        <section className="card login-card login-glass-card">
+        <section className="card login-card">
           <label className="sync-field">
             <span>ログインIDまたはメールアドレス</span>
             <input
@@ -289,7 +200,7 @@ export default function Login() {
           onClick={() => setShowTerms(false)}
         >
           <div
-            className="modal-card modal-card-glass"
+            className="modal-card"
             role="dialog"
             aria-modal="true"
             aria-labelledby="login-terms-title"
