@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -12,6 +12,22 @@ export default function Layout({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
+
+  useLayoutEffect(() => {
+    if (isHome) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth"
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isHome, location.pathname]);
 
   function handleLogout() {
     logout();
