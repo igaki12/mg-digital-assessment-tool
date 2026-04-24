@@ -26,6 +26,15 @@ type PosturePhase =
   | "sideHolding"
   | "completed";
 
+const POSTURE_HOLD_SEC = 5;
+const POSTURE_HOLD_MS = POSTURE_HOLD_SEC * 1000;
+const SNAPSHOT_MAX_WIDTH = 960;
+
+type PostureSnapshots = {
+  front?: string;
+  side?: string;
+};
+
 export default function PostureAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -34,6 +43,7 @@ export default function PostureAssessment() {
   const streamRef = useRef<MediaStream | null>(null);
   const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const seriesRef = useRef<TimeSeriesEntry[]>([]);
+  const snapshotsRef = useRef<PostureSnapshots>({});
   const holdStartedAtRef = useRef<number | null>(null);
   const readyFramesRef = useRef(0);
   const sideCuePlayedRef = useRef(false);
@@ -42,7 +52,7 @@ export default function PostureAssessment() {
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<PosturePhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(POSTURE_HOLD_SEC);
   const isCompactViewport = useIsCompactViewport();
   const [statusText, setStatusText] = useState(
     "開始すると正面姿勢を検知して5秒計測し、その後に側面姿勢を計測します。"
@@ -50,6 +60,7 @@ export default function PostureAssessment() {
   const [lateralTilt, setLateralTilt] = useState(0);
   const [trunkFlexion, setTrunkFlexion] = useState(0);
   const [droppedHead, setDroppedHead] = useState(0);
+  const [snapshots, setSnapshots] = useState<PostureSnapshots>({});
   const [completedSummary, setCompletedSummary] = useState<{
     lateralTiltDeg: number;
     trunkFlexionDeg: number;
@@ -82,23 +93,50 @@ export default function PostureAssessment() {
 
   const resetMeasurement = useCallback(() => {
     seriesRef.current = [];
+    snapshotsRef.current = {};
     readyFramesRef.current = 0;
     holdStartedAtRef.current = null;
     sideCuePlayedRef.current = false;
-    setCountdown(5);
+    setCountdown(POSTURE_HOLD_SEC);
     setLateralTilt(0);
     setTrunkFlexion(0);
     setDroppedHead(0);
+    setSnapshots({});
     setCompletedSummary(null);
+  }, []);
+
+  const captureSnapshot = useCallback((view: keyof PostureSnapshots) => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      return;
+    }
+
+    const scale = Math.min(1, SNAPSHOT_MAX_WIDTH / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    snapshotsRef.current = {
+      ...snapshotsRef.current,
+      [view]: dataUrl
+    };
+    setSnapshots(snapshotsRef.current);
   }, []);
 
   const startHolding = useCallback(
     async (nextPhase: Extract<PosturePhase, "frontHolding" | "sideHolding">) => {
       readyFramesRef.current = 0;
-      holdStartedAtRef.current = Date.now();
-      setCountdown(5);
+      captureSnapshot(nextPhase === "frontHolding" ? "front" : "side");
+      setCountdown(POSTURE_HOLD_SEC);
       announcementController.stopCurrent();
       await playSignalBeep();
+      holdStartedAtRef.current = Date.now();
       updatePhase(nextPhase);
       if (nextPhase === "frontHolding") {
         setStatusText("正面の姿勢を5秒間キープしてください。");
@@ -108,7 +146,7 @@ export default function PostureAssessment() {
         void announcementController.play("posture.sideReady");
       }
     },
-    [updatePhase]
+    [captureSnapshot, updatePhase]
   );
 
   const finishMeasurement = useCallback(() => {
@@ -241,14 +279,17 @@ export default function PostureAssessment() {
         }
       } else if (currentPhase === "frontHolding" && holdStartedAtRef.current) {
         const elapsedMs = Date.now() - holdStartedAtRef.current;
-        const remaining = Math.max(0, 5 - Math.floor(elapsedMs / 1000));
+        const remaining = Math.max(
+          0,
+          POSTURE_HOLD_SEC - Math.floor(elapsedMs / 1000)
+        );
         setCountdown(remaining);
         seriesRef.current.push({
           timestamp: Date.now(),
           lateralTiltDeg: postureAngles.lateralTiltDeg,
           poseStable: 1
         });
-        if (elapsedMs >= 5000) {
+        if (elapsedMs >= POSTURE_HOLD_MS) {
           holdStartedAtRef.current = null;
           sideCuePlayedRef.current = false;
           updatePhase("sideWaiting");
@@ -276,7 +317,10 @@ export default function PostureAssessment() {
         }
       } else if (currentPhase === "sideHolding" && holdStartedAtRef.current) {
         const elapsedMs = Date.now() - holdStartedAtRef.current;
-        const remaining = Math.max(0, 5 - Math.floor(elapsedMs / 1000));
+        const remaining = Math.max(
+          0,
+          POSTURE_HOLD_SEC - Math.floor(elapsedMs / 1000)
+        );
         setCountdown(remaining);
         seriesRef.current.push({
           timestamp: Date.now(),
@@ -289,7 +333,7 @@ export default function PostureAssessment() {
           sideCuePlayedRef.current = true;
           void announcementController.interruptAndPlay("posture.sideHold");
         }
-        if (elapsedMs >= 5000) {
+        if (elapsedMs >= POSTURE_HOLD_MS) {
           finishMeasurement();
         }
       }
@@ -370,7 +414,11 @@ export default function PostureAssessment() {
     await addTimeSeries({
       sessionId: id,
       frameData: seriesRef.current,
-      details: summary
+      details: {
+        ...summary,
+        holdDurationSec: POSTURE_HOLD_SEC,
+        snapshots: snapshotsRef.current
+      }
     });
     resetMeasurement();
     updatePhase("idle");
@@ -497,6 +545,23 @@ export default function PostureAssessment() {
               <strong>{droppedHead.toFixed(1)}°</strong>
             </div>
           </div>
+          {phase === "completed" &&
+          (snapshots.front || snapshots.side) ? (
+            <div className="camera-metrics ptosis-camera-metrics">
+              {snapshots.front ? (
+                <div className="metric">
+                  <span>正面写真</span>
+                  <strong>撮影済み</strong>
+                </div>
+              ) : null}
+              {snapshots.side ? (
+                <div className="metric">
+                  <span>側面写真</span>
+                  <strong>撮影済み</strong>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
     </Layout>

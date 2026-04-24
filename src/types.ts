@@ -30,6 +30,8 @@ export type TimeSeriesEntry = {
   poseStable?: number;
   blinkCount?: number;
   blinkRatePerMin?: number;
+  expressionSet?: number;
+  expressionPhase?: "rest" | "smile";
   smileLeft?: number;
   smileRight?: number;
   smileSymmetry?: number;

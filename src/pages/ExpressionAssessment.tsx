@@ -25,6 +25,15 @@ type ExpressionPhase =
   | "smileHolding"
   | "completed";
 
+const EXPRESSION_TOTAL_SETS = 4;
+const REST_HOLD_SEC = 10;
+const SMILE_HOLD_SEC = 5;
+const REST_HOLD_MS = REST_HOLD_SEC * 1000;
+const SMILE_HOLD_MS = SMILE_HOLD_SEC * 1000;
+const TOTAL_REST_SECONDS = REST_HOLD_SEC * EXPRESSION_TOTAL_SETS;
+const REST_SMILE_MAX_AMPLITUDE = 0.24;
+const SMILE_START_MIN_AMPLITUDE = 0.25;
+
 export default function ExpressionAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -37,15 +46,17 @@ export default function ExpressionAssessment() {
   const readyFramesRef = useRef(0);
   const blinkCountRef = useRef(0);
   const blinkClosedRef = useRef(false);
+  const currentSetRef = useRef(1);
   const runIdRef = useRef(0);
   const phaseRef = useRef<ExpressionPhase>("idle");
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<ExpressionPhase>("idle");
+  const [currentSet, setCurrentSet] = useState(1);
   const [showOverlay, setShowOverlay] = useState(true);
   const [statusText, setStatusText] = useState(
-    "開始すると自然表情10秒、笑顔5秒の順で検査します。"
+    "開始すると自然表情10秒、笑顔5秒を4セット繰り返します。"
   );
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(REST_HOLD_SEC);
   const [blinkCount, setBlinkCount] = useState(0);
   const [smileLeft, setSmileLeft] = useState(0);
   const [smileRight, setSmileRight] = useState(0);
@@ -88,11 +99,13 @@ export default function ExpressionAssessment() {
     readyFramesRef.current = 0;
     blinkCountRef.current = 0;
     blinkClosedRef.current = false;
+    currentSetRef.current = 1;
+    setCurrentSet(1);
     setBlinkCount(0);
     setSmileLeft(0);
     setSmileRight(0);
     setSmileSymmetry(0);
-    setCountdown(10);
+    setCountdown(REST_HOLD_SEC);
     setCompletedSummary(null);
   }, []);
 
@@ -103,12 +116,13 @@ export default function ExpressionAssessment() {
       await playSignalBeep();
       holdStartedAtRef.current = Date.now();
       updatePhase(nextPhase);
+      const setLabel = `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目`;
       if (nextPhase === "restHolding") {
-        setCountdown(10);
-        setStatusText("自然な顔のまま10秒間キープしてください。");
+        setCountdown(REST_HOLD_SEC);
+        setStatusText(`${setLabel}: 自然な顔のまま10秒間キープしてください。`);
       } else {
-        setCountdown(5);
-        setStatusText("できるだけ大きな笑顔を5秒間キープしてください。");
+        setCountdown(SMILE_HOLD_SEC);
+        setStatusText(`${setLabel}: できるだけ大きな笑顔を5秒間キープしてください。`);
       }
     },
     [updatePhase]
@@ -129,7 +143,7 @@ export default function ExpressionAssessment() {
       )
     );
     const symmetry = avg(smileFrames.map((entry) => entry.smileSymmetry ?? 0));
-    const blinkRatePerMin = blinkCountRef.current * 6;
+    const blinkRatePerMin = (blinkCountRef.current / TOTAL_REST_SECONDS) * 60;
     setCompletedSummary({
       blinkCount: blinkCountRef.current,
       blinkRatePerMin,
@@ -229,17 +243,24 @@ export default function ExpressionAssessment() {
             cooldownMs: 4000
           });
         } else {
-          readyFramesRef.current += 1;
-          if (readyFramesRef.current >= 6) {
-            await startHold("restHolding");
-            if (runId !== runIdRef.current) {
-              return;
+          if (smile.amplitude > REST_SMILE_MAX_AMPLITUDE) {
+            readyFramesRef.current = 0;
+            setStatusText(
+              `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目: 口元の力を抜いて、自然な顔に戻してください。`
+            );
+          } else {
+            readyFramesRef.current += 1;
+            if (readyFramesRef.current >= 6) {
+              await startHold("restHolding");
+              if (runId !== runIdRef.current) {
+                return;
+              }
             }
           }
         }
       } else if (currentPhase === "restHolding" && holdStartedAtRef.current) {
         const elapsedMs = Date.now() - holdStartedAtRef.current;
-        setCountdown(Math.max(0, 10 - Math.floor(elapsedMs / 1000)));
+        setCountdown(Math.max(0, REST_HOLD_SEC - Math.floor(elapsedMs / 1000)));
         if (avgEar < 0.19) {
           blinkClosedRef.current = true;
         } else if (blinkClosedRef.current) {
@@ -249,13 +270,17 @@ export default function ExpressionAssessment() {
         }
         seriesRef.current.push({
           timestamp: Date.now(),
+          expressionSet: currentSetRef.current,
+          expressionPhase: "rest",
           blinkCount: blinkCountRef.current,
-          blinkRatePerMin: blinkCountRef.current * 6
+          blinkRatePerMin: (blinkCountRef.current / TOTAL_REST_SECONDS) * 60
         });
-        if (elapsedMs >= 10000) {
+        if (elapsedMs >= REST_HOLD_MS) {
           holdStartedAtRef.current = null;
           updatePhase("smileWaiting");
-          setStatusText("できるだけ大きな笑顔を作ってください。");
+          setStatusText(
+            `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目: できるだけ大きな笑顔を作ってください。`
+          );
           void announcementController.interruptAndPlay("expression.smile");
         }
       } else if (currentPhase === "smileWaiting") {
@@ -265,7 +290,7 @@ export default function ExpressionAssessment() {
           void announcementController.play("common.faceMissing", {
             cooldownMs: 4000
           });
-        } else if (smile.amplitude < 0.25) {
+        } else if (smile.amplitude < SMILE_START_MIN_AMPLITUDE) {
           readyFramesRef.current = 0;
           setStatusText("口角を上げて歯を見せるように笑顔を作ってください。");
         } else {
@@ -279,15 +304,30 @@ export default function ExpressionAssessment() {
         }
       } else if (currentPhase === "smileHolding" && holdStartedAtRef.current) {
         const elapsedMs = Date.now() - holdStartedAtRef.current;
-        setCountdown(Math.max(0, 5 - Math.floor(elapsedMs / 1000)));
+        setCountdown(Math.max(0, SMILE_HOLD_SEC - Math.floor(elapsedMs / 1000)));
         seriesRef.current.push({
           timestamp: Date.now(),
+          expressionSet: currentSetRef.current,
+          expressionPhase: "smile",
           smileLeft: smile.left,
           smileRight: smile.right,
           smileSymmetry: smile.symmetry
         });
-        if (elapsedMs >= 5000) {
-          finishMeasurement();
+        if (elapsedMs >= SMILE_HOLD_MS) {
+          holdStartedAtRef.current = null;
+          if (currentSetRef.current >= EXPRESSION_TOTAL_SETS) {
+            finishMeasurement();
+          } else {
+            currentSetRef.current += 1;
+            setCurrentSet(currentSetRef.current);
+            readyFramesRef.current = 0;
+            updatePhase("restWaiting");
+            setCountdown(REST_HOLD_SEC);
+            setStatusText(
+              `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目: 自然な顔でカメラを見てください。`
+            );
+            void announcementController.interruptAndPlay("expression.rest");
+          }
         }
       }
 
@@ -334,7 +374,7 @@ export default function ExpressionAssessment() {
         }
       }
       updatePhase("restWaiting");
-      setStatusText("自然な顔でカメラを見てください。");
+      setStatusText(`1/${EXPRESSION_TOTAL_SETS}セット目: 自然な顔でカメラを見てください。`);
       void announcementController.interruptAndPlay("expression.rest");
       frameRef.current = requestAnimationFrame(() => {
         void tick(runId);
@@ -362,7 +402,12 @@ export default function ExpressionAssessment() {
     await addTimeSeries({
       sessionId: id,
       frameData: seriesRef.current,
-      details: summary
+      details: {
+        ...summary,
+        setCount: EXPRESSION_TOTAL_SETS,
+        restHoldSec: REST_HOLD_SEC,
+        smileHoldSec: SMILE_HOLD_SEC
+      }
     });
     resetMeasurement();
     updatePhase("idle");
@@ -374,7 +419,7 @@ export default function ExpressionAssessment() {
     announcementController.stopCurrent();
     resetMeasurement();
     updatePhase("idle");
-    setStatusText("開始すると自然表情10秒、笑顔5秒の順で検査します。");
+    setStatusText("開始すると自然表情10秒、笑顔5秒を4セット繰り返します。");
   }, [resetMeasurement, stopStream, updatePhase]);
 
   useEffect(() => {
@@ -400,13 +445,13 @@ export default function ExpressionAssessment() {
     phase === "idle"
       ? "待機中"
       : phase === "restWaiting"
-        ? "自然表情の位置合わせ"
+        ? `自然表情の位置合わせ ${currentSet}/${EXPRESSION_TOTAL_SETS}`
         : phase === "restHolding"
-          ? "自然表情を計測中"
+          ? `自然表情を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
           : phase === "smileWaiting"
-            ? "笑顔の準備"
+            ? `笑顔の準備 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
             : phase === "smileHolding"
-              ? "笑顔を計測中"
+              ? `笑顔を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
               : "保存待ち";
   const overlayPrimary =
     phase === "restHolding" || phase === "smileHolding" ? (
@@ -425,13 +470,15 @@ export default function ExpressionAssessment() {
       {showIntroContent ? (
         <section className="page-header">
           <h1>表情検査</h1>
-          <p>仮面様顔貌と瞬目の傾向を見るために、自然表情10秒と笑顔5秒を順に記録します。</p>
+          <p>
+            仮面様顔貌と瞬目の傾向を見るために、自然表情10秒と笑顔5秒を4セット記録します。
+          </p>
         </section>
       ) : null}
       {showIntroContent ? (
         <AssessmentAudioGuide
           announcementKey="pageIntro.expression"
-          summary="この検査では、自然な表情と笑顔を見て、表情の動きやまばたきの様子を確認します。音声ガイドの音量をここで調整できます。"
+          summary="この検査では、自然な表情と笑顔を4セット見て、表情の動きやまばたきの様子を確認します。音声ガイドの音量をここで調整できます。"
         />
       ) : null}
 
@@ -474,6 +521,10 @@ export default function ExpressionAssessment() {
           </div>
 
           <div className="camera-metrics ptosis-camera-metrics">
+            <div className="metric">
+              <span>セット</span>
+              <strong>{currentSet}/{EXPRESSION_TOTAL_SETS}</strong>
+            </div>
             <div className="metric">
               <span>瞬目回数</span>
               <strong>{blinkCount}回</strong>

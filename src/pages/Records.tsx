@@ -147,6 +147,27 @@ function getDetailNumber(
   return asNumber(record?.details?.[key]);
 }
 
+function getPostureSnapshots(record: TimeSeriesRecord | null | undefined) {
+  const snapshots = record?.details?.snapshots;
+  if (!snapshots || typeof snapshots !== "object") {
+    return [];
+  }
+
+  const result: Array<{ key: "front" | "side"; label: string; src: string }> = [];
+  ([
+    ["front", "正面写真"],
+    ["side", "側面写真"]
+  ] as const)
+    .forEach(([key, label]) => {
+      const value = (snapshots as Record<string, unknown>)[key];
+      if (typeof value !== "string" || !value.startsWith("data:image/")) {
+        return;
+      }
+      result.push({ key, label, src: value });
+    });
+  return result;
+}
+
 function averageEntryValue(
   record: TimeSeriesRecord | null | undefined,
   pick: (entry: TimeSeriesEntry) => number | undefined
@@ -739,6 +760,8 @@ function DetailPanel({
   isAssetLoading: boolean;
 }) {
   const detailChart = record ? getDetailChartDefinition(session.type, record) : null;
+  const postureSnapshots =
+    session.type === "posture" ? getPostureSnapshots(record) : [];
 
   return (
     <div className="records-detail">
@@ -837,6 +860,17 @@ function DetailPanel({
       ) : (
         <p className="records-detail-empty">詳細データがありません。</p>
       )}
+
+      {postureSnapshots.length > 0 ? (
+        <div className="records-detail-snapshots">
+          {postureSnapshots.map((snapshot) => (
+            <figure key={snapshot.key} className="records-detail-snapshot">
+              <img src={snapshot.src} alt={snapshot.label} />
+              <figcaption>{snapshot.label}</figcaption>
+            </figure>
+          ))}
+        </div>
+      ) : null}
 
       {videoUrl ? (
         <video className="detail-video" src={videoUrl} controls />

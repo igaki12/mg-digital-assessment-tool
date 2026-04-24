@@ -201,6 +201,22 @@ p {
   box-shadow: 0 16px 32px rgba(16, 42, 43, 0.12);
 }
 
+.assessment-card-heading {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.7rem;
+}
+
+.assessment-card-heading h2 {
+  margin-bottom: 0;
+}
+
+.assessment-card-heading span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
 .card-title {
   font-weight: 600;
   color: var(--accent);
@@ -886,6 +902,32 @@ p {
 
 .records-detail-summary-card strong {
   color: var(--ink);
+}
+
+.records-detail-snapshots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.records-detail-snapshot {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.records-detail-snapshot img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid rgba(199, 227, 221, 0.82);
+  background: var(--surface-muted);
+}
+
+.records-detail-snapshot figcaption {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
 }
 
 .records-detail-empty {

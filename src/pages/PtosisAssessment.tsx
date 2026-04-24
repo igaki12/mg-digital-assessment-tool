@@ -14,6 +14,9 @@ import type { TimeSeriesEntry } from "../types";
 
 type PtosisPhase = "idle" | "waiting" | "measuring" | "completed";
 
+const PTOSIS_DURATION_SEC = 60;
+const PTOSIS_DURATION_MS = PTOSIS_DURATION_SEC * 1000;
+
 export default function PtosisAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -102,6 +105,7 @@ export default function PtosisAssessment() {
   const completeMeasurement = useCallback(() => {
     clearMeasurementTimers();
     stopStream();
+    setElapsed(PTOSIS_DURATION_SEC);
     updatePhase("completed");
     setStatusText("終了です。保存して結果を記録できます。");
     void announcementController.interruptAndPlay("ptosis.done");
@@ -115,7 +119,7 @@ export default function PtosisAssessment() {
     progressCueRef.current = { ten: false, twenty: false };
     setElapsed(0);
     updatePhase("measuring");
-    setStatusText("良い位置です。30秒間、そのまま上を見てください。");
+    setStatusText("良い位置です。60秒間、そのまま上を見てください。");
     void announcementController.play("ptosis.hold");
     measurementTimersRef.current.progress10 = window.setTimeout(() => {
       progressCueRef.current.ten = true;
@@ -127,7 +131,7 @@ export default function PtosisAssessment() {
     }, 20000);
     measurementTimersRef.current.complete = window.setTimeout(() => {
       completeMeasurement();
-    }, 30000);
+    }, PTOSIS_DURATION_MS);
   }, [clearMeasurementTimers, completeMeasurement, updatePhase]);
 
   const tick = useCallback(async (runId: number) => {
@@ -237,7 +241,7 @@ export default function PtosisAssessment() {
     } else if (currentPhase === "measuring" && startTimeRef.current) {
       const timestamp = Date.now();
       const seconds = Math.floor((timestamp - startTimeRef.current) / 1000);
-      setElapsed(seconds);
+      setElapsed(Math.min(PTOSIS_DURATION_SEC, seconds));
       seriesRef.current.push({
         timestamp,
         earLeft: ear.left,
@@ -319,7 +323,8 @@ export default function PtosisAssessment() {
       sessionId: id,
       frameData: data,
       details: {
-        durationSec: elapsed
+        durationSec: Math.max(elapsed, PTOSIS_DURATION_SEC),
+        protocol: "qmg-upward-gaze-60s"
       }
     });
     updatePhase("idle");
@@ -356,7 +361,9 @@ export default function PtosisAssessment() {
   const isRunning = phase === "waiting" || phase === "measuring";
   const overlayPrimary =
     phase === "measuring" ? (
-      <span className="camera-overlay-countdown">{Math.max(0, 30 - elapsed)}</span>
+      <span className="camera-overlay-countdown">
+        {Math.max(0, PTOSIS_DURATION_SEC - elapsed)}
+      </span>
     ) : (
       <span className="camera-overlay-hint">自動で開始</span>
     );
@@ -376,7 +383,7 @@ export default function PtosisAssessment() {
         <section className="page-header">
           <h1>眼瞼下垂テスト</h1>
           <p>
-            頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で30秒の計測が始まります。
+            頭を動かさずに、目だけで天井を見てください。顔位置が整うと自動で60秒の計測が始まります。
           </p>
         </section>
       ) : null}
