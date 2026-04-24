@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
-import CameraOverlay from "../components/CameraOverlay";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -17,6 +17,7 @@ import {
 } from "../mediapipe/pose";
 import { addSession, addTimeSeries } from "../storage/db";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type PosturePhase =
   | "idle"
@@ -52,6 +53,9 @@ export default function PostureAssessment() {
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<PosturePhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("environment");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [countdown, setCountdown] = useState(POSTURE_HOLD_SEC);
   const isCompactViewport = useIsCompactViewport();
   const [statusText, setStatusText] = useState(
@@ -362,10 +366,7 @@ export default function PostureAssessment() {
     try {
       announcementController.enableAutoplay();
       resetMeasurement();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-      });
+      const stream = await openCameraStream(cameraFacingMode);
       const runId = runIdRef.current + 1;
       runIdRef.current = runId;
       streamRef.current = stream;
@@ -391,7 +392,60 @@ export default function PostureAssessment() {
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
       updatePhase("idle");
     }
-  }, [resetMeasurement, tick, updatePhase]);
+  }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
+
+  const switchCamera = useCallback(async () => {
+    const currentPhase = phaseRef.current;
+    if (
+      currentPhase === "frontHolding" ||
+      currentPhase === "sideHolding" ||
+      isSwitchingCamera
+    ) {
+      return;
+    }
+
+    const previousMode = cameraFacingMode;
+    const nextMode = getNextCameraFacingMode(previousMode);
+    setCameraFacingMode(nextMode);
+
+    if (!streamRef.current?.active) {
+      return;
+    }
+
+    setIsSwitchingCamera(true);
+    stopStream();
+    readyFramesRef.current = 0;
+    holdStartedAtRef.current = null;
+    try {
+      const stream = await openCameraStream(nextMode);
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      updatePhase(currentPhase === "sideWaiting" ? "sideWaiting" : "frontWaiting");
+      setStatusText("カメラを切り替えました。姿勢が画面に入る位置に調整してください。");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    } catch (error) {
+      console.warn("Unable to switch posture camera", error);
+      setCameraFacingMode(previousMode);
+      updatePhase("idle");
+      setStatusText("カメラを切り替えられませんでした。端末の設定を確認してください。");
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
   const save = useCallback(async () => {
     const summary = completedSummary;
@@ -502,6 +556,10 @@ export default function PostureAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitching={isSwitchingCamera}
+            isCameraSwitchDisabled={phase === "frontHolding" || phase === "sideHolding"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

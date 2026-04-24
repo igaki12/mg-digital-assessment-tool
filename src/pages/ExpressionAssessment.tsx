@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
-import CameraOverlay from "../components/CameraOverlay";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -16,6 +16,7 @@ import {
 } from "../mediapipe/face";
 import { addSession, addTimeSeries } from "../storage/db";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type ExpressionPhase =
   | "idle"
@@ -53,6 +54,9 @@ export default function ExpressionAssessment() {
   const [phase, setPhase] = useState<ExpressionPhase>("idle");
   const [currentSet, setCurrentSet] = useState(1);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("user");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [statusText, setStatusText] = useState(
     "開始すると自然表情10秒、笑顔5秒を4セット繰り返します。"
   );
@@ -355,10 +359,7 @@ export default function ExpressionAssessment() {
     try {
       announcementController.enableAutoplay();
       resetMeasurement();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false
-      });
+      const stream = await openCameraStream(cameraFacingMode);
       const runId = runIdRef.current + 1;
       runIdRef.current = runId;
       streamRef.current = stream;
@@ -384,7 +385,60 @@ export default function ExpressionAssessment() {
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
       updatePhase("idle");
     }
-  }, [resetMeasurement, tick, updatePhase]);
+  }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
+
+  const switchCamera = useCallback(async () => {
+    const currentPhase = phaseRef.current;
+    if (
+      currentPhase === "restHolding" ||
+      currentPhase === "smileHolding" ||
+      isSwitchingCamera
+    ) {
+      return;
+    }
+
+    const previousMode = cameraFacingMode;
+    const nextMode = getNextCameraFacingMode(previousMode);
+    setCameraFacingMode(nextMode);
+
+    if (!streamRef.current?.active) {
+      return;
+    }
+
+    setIsSwitchingCamera(true);
+    stopStream();
+    readyFramesRef.current = 0;
+    holdStartedAtRef.current = null;
+    try {
+      const stream = await openCameraStream(nextMode);
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      updatePhase(currentPhase === "smileWaiting" ? "smileWaiting" : "restWaiting");
+      setStatusText("カメラを切り替えました。顔が画面に入る位置に調整してください。");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    } catch (error) {
+      console.warn("Unable to switch expression camera", error);
+      setCameraFacingMode(previousMode);
+      updatePhase("idle");
+      setStatusText("カメラを切り替えられませんでした。端末の設定を確認してください。");
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
   const save = useCallback(async () => {
     const summary = completedSummary;
@@ -491,6 +545,10 @@ export default function ExpressionAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitching={isSwitchingCamera}
+            isCameraSwitchDisabled={phase === "restHolding" || phase === "smileHolding"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

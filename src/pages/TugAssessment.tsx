@@ -5,7 +5,7 @@ import {
   type PoseLandmarkerResult
 } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
-import CameraOverlay from "../components/CameraOverlay";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -22,6 +22,7 @@ import {
 import { addSession, addTimeSeries, addVideo } from "../storage/db";
 import { getUserHeight } from "../storage/settings";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type TugPhase = "idle" | "positioning" | "ready" | "measuring";
 type TugMotionPhase =
@@ -85,6 +86,9 @@ export default function TugAssessment() {
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<TugPhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("environment");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [canStart, setCanStart] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -427,10 +431,7 @@ export default function TugAssessment() {
     try {
       announcementController.enableAutoplay();
       resetMeasurement();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-      });
+      const stream = await openCameraStream(cameraFacingMode);
       const runId = runIdRef.current + 1;
       runIdRef.current = runId;
       streamRef.current = stream;
@@ -456,7 +457,57 @@ export default function TugAssessment() {
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
       updatePhase("idle");
     }
-  }, [resetMeasurement, tick, updatePhase]);
+  }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
+
+  const switchCamera = useCallback(async () => {
+    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+      return;
+    }
+
+    const previousMode = cameraFacingMode;
+    const nextMode = getNextCameraFacingMode(previousMode);
+    setCameraFacingMode(nextMode);
+
+    if (!streamRef.current?.active) {
+      return;
+    }
+
+    setIsSwitchingCamera(true);
+    stopStream();
+    readyFramesRef.current = 0;
+    readyCuePlayedRef.current = false;
+    lastHipRef.current = null;
+    setCanStart(false);
+    try {
+      const stream = await openCameraStream(nextMode);
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      updatePhase("positioning");
+      setStatusText("カメラを切り替えました。全身が画面に入る位置に調整してください。");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    } catch (error) {
+      console.warn("Unable to switch 3m stand-up walk camera", error);
+      setCameraFacingMode(previousMode);
+      updatePhase("idle");
+      setStatusText("カメラを切り替えられませんでした。端末の設定を確認してください。");
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
   const save = useCallback(async () => {
     announcementController.stopCurrent();
@@ -638,6 +689,10 @@ export default function TugAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitching={isSwitchingCamera}
+            isCameraSwitchDisabled={phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

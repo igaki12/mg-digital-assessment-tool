@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
-import CameraOverlay from "../components/CameraOverlay";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -18,6 +18,7 @@ import {
 import { addSession, addTimeSeries, addVideo } from "../storage/db";
 import { getUserHeight } from "../storage/settings";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type GaitPhase = "idle" | "waiting" | "measuring";
 
@@ -40,6 +41,9 @@ export default function GaitAssessment() {
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<GaitPhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("environment");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const isCompactViewport = useIsCompactViewport();
   const [statusText, setStatusText] = useState(
     "開始するとカメラ映像を確認し、全身が収まると歩行の記録を始めます。"
@@ -292,10 +296,7 @@ export default function GaitAssessment() {
     try {
       announcementController.enableAutoplay();
       resetMeasurement();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-      });
+      const stream = await openCameraStream(cameraFacingMode);
       const runId = runIdRef.current + 1;
       runIdRef.current = runId;
       streamRef.current = stream;
@@ -321,7 +322,55 @@ export default function GaitAssessment() {
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
       updatePhase("idle");
     }
-  }, [resetMeasurement, tick, updatePhase]);
+  }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
+
+  const switchCamera = useCallback(async () => {
+    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+      return;
+    }
+
+    const previousMode = cameraFacingMode;
+    const nextMode = getNextCameraFacingMode(previousMode);
+    setCameraFacingMode(nextMode);
+
+    if (!streamRef.current?.active) {
+      return;
+    }
+
+    setIsSwitchingCamera(true);
+    stopStream();
+    readyFramesRef.current = 0;
+    lastHipRef.current = null;
+    try {
+      const stream = await openCameraStream(nextMode);
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      updatePhase("waiting");
+      setStatusText("カメラを切り替えました。全身が画面に入る位置に調整してください。");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    } catch (error) {
+      console.warn("Unable to switch gait camera", error);
+      setCameraFacingMode(previousMode);
+      updatePhase("idle");
+      setStatusText("カメラを切り替えられませんでした。端末の設定を確認してください。");
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
   const save = useCallback(async () => {
     announcementController.stopCurrent();
@@ -421,6 +470,10 @@ export default function GaitAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitching={isSwitchingCamera}
+            isCameraSwitchDisabled={phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">

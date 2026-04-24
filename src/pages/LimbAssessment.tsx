@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { announcementController } from "../audio/controller";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -9,6 +10,7 @@ import { syncOverlayCanvas } from "../mediapipe/canvas";
 import { addSession, addTimeSeries } from "../storage/db";
 import { extractArmAngles, getPoseLandmarker } from "../mediapipe/pose";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 export default function LimbAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
@@ -20,6 +22,8 @@ export default function LimbAssessment() {
   const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const [running, setRunning] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("user");
   const isCompactViewport = useIsCompactViewport();
   const [leftAngle, setLeftAngle] = useState(0);
   const [rightAngle, setRightAngle] = useState(0);
@@ -33,6 +37,10 @@ export default function LimbAssessment() {
     frameRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.srcObject = null;
+    }
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (canvas && ctx) {
@@ -95,10 +103,7 @@ export default function LimbAssessment() {
     }
     announcementController.enableAutoplay();
     announcementController.stopCurrent();
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
-      audio: false
-    });
+    const stream = await openCameraStream(cameraFacingMode);
     streamRef.current = stream;
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -122,7 +127,14 @@ export default function LimbAssessment() {
       }
     })();
     frameRef.current = requestAnimationFrame(tick);
-  }, [running, tick]);
+  }, [cameraFacingMode, running, tick]);
+
+  const switchCamera = useCallback(() => {
+    if (running) {
+      return;
+    }
+    setCameraFacingMode((current) => getNextCameraFacingMode(current));
+  }, [running]);
 
   const save = useCallback(async () => {
     stopStream();
@@ -183,9 +195,14 @@ export default function LimbAssessment() {
           {showOverlay ? (
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
-          <div className="camera-overlay">
-            <p>腕が枠内に収まるように調整</p>
-          </div>
+          <CameraOverlay
+            topLabel={running ? "計測中" : "待機中"}
+            topMessage="腕が枠内に収まるように調整"
+            centerPrimary={<span className="camera-overlay-hint">肩の高さでキープ</span>}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitchDisabled={running}
+          />
         </div>
         <div className="camera-sidebar">
           <div className="button-row">

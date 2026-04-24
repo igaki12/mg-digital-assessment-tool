@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DrawingUtils, FaceLandmarker } from "@mediapipe/tasks-vision";
 import AssessmentAudioGuide from "../components/AssessmentAudioGuide";
-import CameraOverlay from "../components/CameraOverlay";
+import CameraOverlay, { type CameraFacingMode } from "../components/CameraOverlay";
 import useIsCompactViewport from "../hooks/useIsCompactViewport";
 import Layout from "../components/Layout";
 import PrimaryButton from "../components/PrimaryButton";
@@ -11,6 +11,7 @@ import { syncOverlayCanvas } from "../mediapipe/canvas";
 import { addSession, addTimeSeries } from "../storage/db";
 import { extractEar, getFaceLandmarker, isFaceCentered } from "../mediapipe/face";
 import type { TimeSeriesEntry } from "../types";
+import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type PtosisPhase = "idle" | "waiting" | "measuring" | "completed";
 
@@ -42,6 +43,9 @@ export default function PtosisAssessment() {
   const showOverlayRef = useRef(true);
   const [phase, setPhase] = useState<PtosisPhase>("idle");
   const [showOverlay, setShowOverlay] = useState(true);
+  const [cameraFacingMode, setCameraFacingMode] =
+    useState<CameraFacingMode>("user");
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [earLeft, setEarLeft] = useState(0);
   const [earRight, setEarRight] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -265,10 +269,7 @@ export default function PtosisAssessment() {
     try {
       announcementController.enableAutoplay();
       resetMeasurement();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false
-      });
+      const stream = await openCameraStream(cameraFacingMode);
       const runId = runIdRef.current + 1;
       runIdRef.current = runId;
       streamRef.current = stream;
@@ -294,7 +295,53 @@ export default function PtosisAssessment() {
       setStatusText("カメラへのアクセスが許可されていません。設定を確認してください。");
       updatePhase("idle");
     }
-  }, [resetMeasurement, tick, updatePhase]);
+  }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
+
+  const switchCamera = useCallback(async () => {
+    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+      return;
+    }
+
+    const previousMode = cameraFacingMode;
+    const nextMode = getNextCameraFacingMode(previousMode);
+    setCameraFacingMode(nextMode);
+
+    if (!streamRef.current?.active) {
+      return;
+    }
+
+    setIsSwitchingCamera(true);
+    stopStream();
+    try {
+      const stream = await openCameraStream(nextMode);
+      const runId = runIdRef.current + 1;
+      runIdRef.current = runId;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
+        }
+      }
+      updatePhase("waiting");
+      setStatusText("カメラを切り替えました。顔を枠に合わせてください。");
+      frameRef.current = requestAnimationFrame(() => {
+        void tick(runId);
+      });
+    } catch (error) {
+      console.warn("Unable to switch ptosis camera", error);
+      setCameraFacingMode(previousMode);
+      updatePhase("idle");
+      setStatusText("カメラを切り替えられませんでした。端末の設定を確認してください。");
+    } finally {
+      setIsSwitchingCamera(false);
+    }
+  }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
   const save = useCallback(async () => {
     stopStream();
@@ -406,6 +453,10 @@ export default function PtosisAssessment() {
             topLabel={phaseTitle}
             topMessage={statusText}
             centerPrimary={overlayPrimary}
+            cameraFacingMode={cameraFacingMode}
+            onSwitchCamera={switchCamera}
+            isCameraSwitching={isSwitchingCamera}
+            isCameraSwitchDisabled={phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
