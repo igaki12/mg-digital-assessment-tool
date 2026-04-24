@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import PrimaryButton from "../components/PrimaryButton";
 
@@ -92,13 +92,13 @@ export default function Login() {
     <div className="login-page">
       <main className="login-shell">
         <section className="login-brand">
-          <Link to="/login" className="logo">
-            デジニューロマーカー
-          </Link>
-          <span className="assessment-card-heading login-badge">
-            <span>DigiNeuro Marker</span>
-          </span>
-          <h1>ログイン</h1>
+          <h1 className="login-product-title">
+            <span data-title="DigiNeuro Marker">DigiNeuro Marker</span>
+          </h1>
+          <p className="login-product-copy">
+            パーキンソン病・重症筋無力症の症状記録をサポートする包括的計測アプリ
+          </p>
+          <h2 className="login-form-heading">ログイン</h2>
           <p>
             開発版のため、任意のログインIDとパスワードでログインできます。利用規約への同意が必要です。
           </p>
@@ -163,6 +163,10 @@ export default function Login() {
           </PrimaryButton>
         </section>
       </main>
+
+      <footer className="login-footer">
+        Copyright © 2026 奈良医大 脳神経内科 | All rights reserved.
+      </footer>
 
       {showTerms ? (
         <div
