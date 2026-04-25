@@ -116,8 +116,18 @@ export default function ExpressionAssessment() {
   const startHold = useCallback(
     async (nextPhase: Extract<ExpressionPhase, "restHolding" | "smileHolding">) => {
       readyFramesRef.current = 0;
-      announcementController.stopCurrent();
+      const expectedWaitingPhase =
+        nextPhase === "restHolding" ? "restWaiting" : "smileWaiting";
+      await announcementController.interruptAndPlay(
+        nextPhase === "restHolding" ? "expression.restHold" : "expression.smileHold"
+      );
+      if (phaseRef.current !== expectedWaitingPhase) {
+        return;
+      }
       await playSignalBeep();
+      if (phaseRef.current !== expectedWaitingPhase) {
+        return;
+      }
       holdStartedAtRef.current = Date.now();
       updatePhase(nextPhase);
       const setLabel = `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目`;
@@ -330,7 +340,14 @@ export default function ExpressionAssessment() {
             setStatusText(
               `${currentSetRef.current}/${EXPRESSION_TOTAL_SETS}セット目: 自然な顔でカメラを見てください。`
             );
-            void announcementController.interruptAndPlay("expression.rest");
+            void (async () => {
+              const completed = await announcementController.interruptAndPlay(
+                "expression.nextSet"
+              );
+              if (completed && phaseRef.current === "restWaiting") {
+                void announcementController.play("expression.rest");
+              }
+            })();
           }
         }
       }
