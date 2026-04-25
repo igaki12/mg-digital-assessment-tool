@@ -39,7 +39,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className={`app-header${isMobileNavOpen ? " is-mobile-open" : ""}`}>
         <div className="app-header-bar">
           <Link to="/" className="logo">
-            MG Digital Assessment
+            DigiNeuro Marker
           </Link>
           <button
             type="button"

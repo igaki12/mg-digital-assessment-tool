@@ -28,14 +28,14 @@ export default function PtosisAssessment() {
   const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const readyFramesRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
-  const progressCueRef = useRef({ ten: false, twenty: false });
+  const progressCueRef = useRef({ ten: false, remaining10: false });
   const measurementTimersRef = useRef<{
     progress10: number | null;
-    progress20: number | null;
+    remaining10: number | null;
     complete: number | null;
   }>({
     progress10: null,
-    progress20: null,
+    remaining10: null,
     complete: null
   });
   const runIdRef = useRef(0);
@@ -60,9 +60,9 @@ export default function PtosisAssessment() {
       window.clearTimeout(timers.progress10);
       timers.progress10 = null;
     }
-    if (timers.progress20 !== null) {
-      window.clearTimeout(timers.progress20);
-      timers.progress20 = null;
+    if (timers.remaining10 !== null) {
+      window.clearTimeout(timers.remaining10);
+      timers.remaining10 = null;
     }
     if (timers.complete !== null) {
       window.clearTimeout(timers.complete);
@@ -95,7 +95,7 @@ export default function PtosisAssessment() {
     seriesRef.current = [];
     readyFramesRef.current = 0;
     startTimeRef.current = null;
-    progressCueRef.current = { ten: false, twenty: false };
+    progressCueRef.current = { ten: false, remaining10: false };
     setElapsed(0);
     setEarLeft(0);
     setEarRight(0);
@@ -120,7 +120,7 @@ export default function PtosisAssessment() {
     await playSignalBeep();
     clearMeasurementTimers();
     startTimeRef.current = Date.now();
-    progressCueRef.current = { ten: false, twenty: false };
+    progressCueRef.current = { ten: false, remaining10: false };
     setElapsed(0);
     updatePhase("measuring");
     setStatusText("良い位置です。60秒間、そのまま上を見てください。");
@@ -129,10 +129,10 @@ export default function PtosisAssessment() {
       progressCueRef.current.ten = true;
       void announcementController.interruptAndPlay("ptosis.progress10");
     }, 10000);
-    measurementTimersRef.current.progress20 = window.setTimeout(() => {
-      progressCueRef.current.twenty = true;
-      void announcementController.interruptAndPlay("ptosis.progress20");
-    }, 20000);
+    measurementTimersRef.current.remaining10 = window.setTimeout(() => {
+      progressCueRef.current.remaining10 = true;
+      void announcementController.interruptAndPlay("ptosis.remaining10");
+    }, PTOSIS_DURATION_MS - 10000);
     measurementTimersRef.current.complete = window.setTimeout(() => {
       completeMeasurement();
     }, PTOSIS_DURATION_MS);

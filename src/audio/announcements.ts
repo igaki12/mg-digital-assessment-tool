@@ -5,7 +5,7 @@ const publicFiles = {
   "ptosis.intro": "ptosis-intro.wav",
   "ptosis.hold": "ptosis-hold.wav",
   "ptosis.progress10": "ptosis-progress-10.wav",
-  "ptosis.progress20": "ptosis-progress-20.wav",
+  "ptosis.remaining10": "ptosis-progress-20.wav",
   "ptosis.done": "ptosis-done.wav",
   "limbs.start": "limbs-start.wav",
   "limbs.positioning": "limbs-positioning.wav",
