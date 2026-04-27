@@ -32,6 +32,12 @@ export default function LimbAssessment() {
   const [duration, setDuration] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const isSavingRef = useRef(false);
+  const progressCueRef = useRef({
+    progress30: false,
+    progress60: false,
+    remaining10: false,
+    done: false
+  });
 
   const stopStream = useCallback(() => {
     if (frameRef.current) {
@@ -138,7 +144,23 @@ export default function LimbAssessment() {
       const elapsedSec = Math.floor((timestamp - startTimeRef.current) / 1000);
       const cappedElapsedSec = Math.min(elapsedSec, LIMB_DURATION_SEC);
       setDuration(cappedElapsedSec);
+      if (elapsedSec >= 30 && !progressCueRef.current.progress30) {
+        progressCueRef.current.progress30 = true;
+        void announcementController.interruptAndPlay("limbs.progress30");
+      }
+      if (elapsedSec >= 60 && !progressCueRef.current.progress60) {
+        progressCueRef.current.progress60 = true;
+        void announcementController.interruptAndPlay("limbs.progress60");
+      }
+      if (elapsedSec >= 80 && !progressCueRef.current.remaining10) {
+        progressCueRef.current.remaining10 = true;
+        void announcementController.interruptAndPlay("limbs.remaining10");
+      }
       if (elapsedSec >= LIMB_DURATION_SEC) {
+        if (!progressCueRef.current.done) {
+          progressCueRef.current.done = true;
+          void announcementController.interruptAndPlay("limbs.done");
+        }
         void save();
         return;
       }
@@ -167,13 +189,22 @@ export default function LimbAssessment() {
     }
     seriesRef.current = [];
     isSavingRef.current = false;
+    progressCueRef.current = {
+      progress30: false,
+      progress60: false,
+      remaining10: false,
+      done: false
+    };
     startTimeRef.current = Date.now();
     setDuration(0);
     setRunning(true);
     void (async () => {
       const completed = await announcementController.interruptAndPlay("limbs.start");
       if (completed) {
-        await announcementController.play("limbs.positioning");
+        const durationCompleted = await announcementController.play("limbs.duration90");
+        if (durationCompleted) {
+          await announcementController.play("limbs.positioning");
+        }
       }
     })();
     frameRef.current = requestAnimationFrame(tick);
