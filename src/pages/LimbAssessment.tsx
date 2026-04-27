@@ -12,6 +12,8 @@ import { extractArmAngles, getPoseLandmarker } from "../mediapipe/pose";
 import type { TimeSeriesEntry } from "../types";
 import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
+const LIMB_DURATION_SEC = 90;
+
 export default function LimbAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -29,6 +31,7 @@ export default function LimbAssessment() {
   const [rightAngle, setRightAngle] = useState(0);
   const [duration, setDuration] = useState(0);
   const startTimeRef = useRef<number | null>(null);
+  const isSavingRef = useRef(false);
 
   const stopStream = useCallback(() => {
     if (frameRef.current) {
@@ -48,6 +51,46 @@ export default function LimbAssessment() {
     }
     setRunning(false);
   }, []);
+
+  const save = useCallback(async () => {
+    if (isSavingRef.current) {
+      return;
+    }
+    isSavingRef.current = true;
+    stopStream();
+    const data = seriesRef.current;
+    if (!data.length) {
+      isSavingRef.current = false;
+      return;
+    }
+    const avg =
+      data.reduce((acc, entry) => acc + ((entry.armLeftDeg ?? 0) + (entry.armRightDeg ?? 0)) / 2, 0) /
+      data.length;
+    const measuredDurationSec = startTimeRef.current
+      ? Math.min(
+          Math.floor((Date.now() - startTimeRef.current) / 1000),
+          LIMB_DURATION_SEC
+        )
+      : Math.min(duration, LIMB_DURATION_SEC);
+    const id = Date.now();
+    await addSession({
+      id,
+      type: "limbs",
+      date: new Date().toISOString(),
+      summaryScore: Number(avg.toFixed(2)),
+      notes: "肩の角度平均"
+    });
+    await addTimeSeries({
+      sessionId: id,
+      frameData: data,
+      details: {
+        durationSec: measuredDurationSec,
+        targetDurationSec: LIMB_DURATION_SEC
+      }
+    });
+    seriesRef.current = [];
+    isSavingRef.current = false;
+  }, [duration, stopStream]);
 
   const tick = useCallback(async () => {
     const video = videoRef.current;
@@ -92,10 +135,16 @@ export default function LimbAssessment() {
       armRightDeg: angles.right
     });
     if (startTimeRef.current) {
-      setDuration(Math.floor((timestamp - startTimeRef.current) / 1000));
+      const elapsedSec = Math.floor((timestamp - startTimeRef.current) / 1000);
+      const cappedElapsedSec = Math.min(elapsedSec, LIMB_DURATION_SEC);
+      setDuration(cappedElapsedSec);
+      if (elapsedSec >= LIMB_DURATION_SEC) {
+        void save();
+        return;
+      }
     }
     frameRef.current = requestAnimationFrame(tick);
-  }, [showOverlay]);
+  }, [save, showOverlay]);
 
   const start = useCallback(async () => {
     if (running) {
@@ -117,6 +166,7 @@ export default function LimbAssessment() {
       }
     }
     seriesRef.current = [];
+    isSavingRef.current = false;
     startTimeRef.current = Date.now();
     setDuration(0);
     setRunning(true);
@@ -135,30 +185,6 @@ export default function LimbAssessment() {
     }
     setCameraFacingMode((current) => getNextCameraFacingMode(current));
   }, [running]);
-
-  const save = useCallback(async () => {
-    stopStream();
-    const data = seriesRef.current;
-    if (!data.length) {
-      return;
-    }
-    const avg =
-      data.reduce((acc, entry) => acc + ((entry.armLeftDeg ?? 0) + (entry.armRightDeg ?? 0)) / 2, 0) /
-      data.length;
-    const id = Date.now();
-    await addSession({
-      id,
-      type: "limbs",
-      date: new Date().toISOString(),
-      summaryScore: Number(avg.toFixed(2)),
-      notes: "肩の角度平均"
-    });
-    await addTimeSeries({
-      sessionId: id,
-      frameData: data
-    });
-    seriesRef.current = [];
-  }, [stopStream]);
 
   useEffect(() => {
     return () => {
@@ -180,13 +206,13 @@ export default function LimbAssessment() {
       {showIntroContent ? (
         <section className="page-header">
           <h1>上肢挙上テスト</h1>
-          <p>両腕を肩の高さまで上げ、そのまま枠内でキープしてください。</p>
+          <p>両腕を肩の高さまで上げ、そのまま90秒間、枠内でキープしてください。</p>
         </section>
       ) : null}
       {showIntroContent ? (
         <AssessmentAudioGuide
           announcementKey="pageIntro.limbs"
-          summary="この検査では、両腕を上げた姿勢をどのくらい保てるかを確認します。腕の上がり方や途中で下がらないかを見ます。"
+          summary="この検査では、両腕を上げた姿勢を90秒間保てるかを確認します。腕の上がり方や途中で下がらないかを見ます。"
         />
       ) : null}
       <section className="camera-panel">
@@ -197,7 +223,7 @@ export default function LimbAssessment() {
           ) : null}
           <CameraOverlay
             topLabel={running ? "計測中" : "待機中"}
-            topMessage="腕が枠内に収まるように調整"
+            topMessage={running ? "90秒間、肩の高さでキープ" : "腕が枠内に収まるように調整"}
             centerPrimary={<span className="camera-overlay-hint">肩の高さでキープ</span>}
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}

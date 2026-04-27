@@ -59,8 +59,9 @@ export function extractArmAngles(result: PoseLandmarkerResult) {
   };
 
   const horizontal = { x: 1, y: 0 };
+  const leftAngle = angleBetween(leftVector, horizontal);
   return {
-    left: angleBetween(leftVector, horizontal),
+    left: 180 - leftAngle,
     right: angleBetween(rightVector, horizontal)
   };
 }
