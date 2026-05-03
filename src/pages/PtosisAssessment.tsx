@@ -106,14 +106,66 @@ export default function PtosisAssessment() {
     setPhase(nextPhase);
   }, []);
 
-  const completeMeasurement = useCallback(() => {
+  const persistMeasurement = useCallback(
+    async (durationSec: number) => {
+      const data = [...seriesRef.current];
+      if (!data.length) {
+        return false;
+      }
+
+      const avg =
+        data.reduce(
+          (acc, entry) => acc + ((entry.earLeft ?? 0) + (entry.earRight ?? 0)) / 2,
+          0
+        ) / data.length;
+      const id = Date.now();
+      await addSession({
+        id,
+        type: "ptosis",
+        date: new Date().toISOString(),
+        summaryScore: Number(avg.toFixed(4)),
+        notes: `EAR平均 ${avg.toFixed(4)}`
+      });
+      await addTimeSeries({
+        sessionId: id,
+        frameData: data,
+        details: {
+          durationSec,
+          protocol: "qmg-upward-gaze-60s"
+        }
+      });
+      seriesRef.current = [];
+      return true;
+    },
+    []
+  );
+
+  const completeMeasurement = useCallback(async () => {
     clearMeasurementTimers();
     stopStream();
     setElapsed(PTOSIS_DURATION_SEC);
-    updatePhase("completed");
-    setStatusText("終了です。保存して結果を記録できます。");
+    setStatusText("検査が終了しました。自動保存しています。");
     void announcementController.interruptAndPlay("ptosis.done");
-  }, [clearMeasurementTimers, stopStream, updatePhase]);
+    let saved = false;
+    try {
+      saved = await persistMeasurement(PTOSIS_DURATION_SEC);
+    } catch (error) {
+      console.warn("Unable to auto-save ptosis assessment", error);
+    }
+    resetMeasurement();
+    updatePhase("idle");
+    setStatusText(
+      saved
+        ? "保存しました。もう一度測定できます。"
+        : "保存できる測定データがありません。もう一度測定してください。"
+    );
+  }, [
+    clearMeasurementTimers,
+    persistMeasurement,
+    resetMeasurement,
+    stopStream,
+    updatePhase
+  ]);
 
   const beginMeasurement = useCallback(async () => {
     announcementController.stopCurrent();
@@ -134,7 +186,7 @@ export default function PtosisAssessment() {
       void announcementController.interruptAndPlay("ptosis.remaining10");
     }, PTOSIS_DURATION_MS - 10000);
     measurementTimersRef.current.complete = window.setTimeout(() => {
-      completeMeasurement();
+      void completeMeasurement();
     }, PTOSIS_DURATION_MS);
   }, [clearMeasurementTimers, completeMeasurement, updatePhase]);
 
@@ -343,42 +395,6 @@ export default function PtosisAssessment() {
     }
   }, [cameraFacingMode, isSwitchingCamera, stopStream, tick, updatePhase]);
 
-  const save = useCallback(async () => {
-    stopStream();
-    announcementController.stopCurrent();
-    const data = seriesRef.current;
-    if (!data.length) {
-      updatePhase("idle");
-      setStatusText("開始すると音声案内に合わせて顔位置を確認します。");
-      return;
-    }
-
-    const avg =
-      data.reduce(
-        (acc, entry) => acc + ((entry.earLeft ?? 0) + (entry.earRight ?? 0)) / 2,
-        0
-      ) / data.length;
-    const id = Date.now();
-    await addSession({
-      id,
-      type: "ptosis",
-      date: new Date().toISOString(),
-      summaryScore: Number(avg.toFixed(4)),
-      notes: `EAR平均 ${avg.toFixed(4)}`
-    });
-    await addTimeSeries({
-      sessionId: id,
-      frameData: data,
-      details: {
-        durationSec: Math.max(elapsed, PTOSIS_DURATION_SEC),
-        protocol: "qmg-upward-gaze-60s"
-      }
-    });
-    updatePhase("idle");
-    setStatusText("保存しました。再度検査することもできます。");
-    resetMeasurement();
-  }, [elapsed, resetMeasurement, stopStream, updatePhase]);
-
   const cancel = useCallback(() => {
     stopStream();
     announcementController.stopCurrent();
@@ -475,14 +491,6 @@ export default function PtosisAssessment() {
                   onClick={() => setShowOverlay((prev) => !prev)}
                 >
                   {showOverlay ? "推定表示をOFF" : "推定表示をON"}
-                </button>
-              </>
-            ) : null}
-            {phase === "completed" ? (
-              <>
-                <PrimaryButton onClick={save}>保存する</PrimaryButton>
-                <button className="ghost-button" onClick={start}>
-                  もう一度測定
                 </button>
               </>
             ) : null}
