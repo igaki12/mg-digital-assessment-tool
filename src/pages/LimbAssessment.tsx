@@ -231,6 +231,13 @@ export default function LimbAssessment() {
   }, [showOverlay]);
 
   const showIntroContent = !isCompactViewport || !running;
+  const overlayPrimary = running ? (
+    <span className="camera-overlay-countdown">
+      {Math.max(0, LIMB_DURATION_SEC - duration)}
+    </span>
+  ) : (
+    <span className="camera-overlay-hint">自動で開始</span>
+  );
 
   return (
     <Layout>
@@ -253,9 +260,10 @@ export default function LimbAssessment() {
             <canvas ref={canvasRef} className="camera-canvas" />
           ) : null}
           <CameraOverlay
+            tone={running ? "active" : "guide"}
             topLabel={running ? "計測中" : "待機中"}
             topMessage={running ? "90秒間、肩の高さでキープ" : "腕が枠内に収まるように調整"}
-            centerPrimary={<span className="camera-overlay-hint">肩の高さでキープ</span>}
+            centerPrimary={overlayPrimary}
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitchDisabled={running}
