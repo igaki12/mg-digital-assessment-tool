@@ -20,7 +20,7 @@ import { getUserHeight } from "../storage/settings";
 import type { TimeSeriesEntry } from "../types";
 import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
-type GaitPhase = "idle" | "waiting" | "measuring";
+type GaitPhase = "idle" | "loading" | "waiting" | "measuring";
 
 export default function GaitAssessment() {
   const frameElementRef = useRef<HTMLDivElement | null>(null);
@@ -290,7 +290,11 @@ export default function GaitAssessment() {
   );
 
   const start = useCallback(async () => {
-    if (phaseRef.current === "waiting" || phaseRef.current === "measuring") {
+    if (
+      phaseRef.current === "loading" ||
+      phaseRef.current === "waiting" ||
+      phaseRef.current === "measuring"
+    ) {
       return;
     }
     try {
@@ -311,6 +315,12 @@ export default function GaitAssessment() {
           );
         }
       }
+      updatePhase("loading");
+      setStatusText("解析モジュールを起動しています。少しお待ちください。");
+      await getPoseLandmarker();
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
       updatePhase("waiting");
       setStatusText("全身が画面に収まる位置に立つと、記録を開始します。");
       void announcementController.interruptAndPlay("gait.start");
@@ -325,7 +335,11 @@ export default function GaitAssessment() {
   }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
 
   const switchCamera = useCallback(async () => {
-    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+    if (
+      phaseRef.current === "loading" ||
+      phaseRef.current === "measuring" ||
+      isSwitchingCamera
+    ) {
       return;
     }
 
@@ -436,11 +450,19 @@ export default function GaitAssessment() {
     }
   }, [showOverlay]);
 
-  const isRunning = phase === "waiting" || phase === "measuring";
+  const isRunning = phase === "loading" || phase === "waiting" || phase === "measuring";
   const phaseTitle =
-    phase === "idle" ? "待機中" : phase === "waiting" ? "位置合わせ" : "記録中";
+    phase === "idle"
+      ? "待機中"
+      : phase === "loading"
+        ? "起動中"
+        : phase === "waiting"
+          ? "位置合わせ"
+          : "記録中";
   const overlayPrimary =
-    phase === "measuring" ? (
+    phase === "loading" ? (
+      <span className="camera-overlay-hint">起動中...</span>
+    ) : phase === "measuring" ? (
       <span className="camera-overlay-hint">記録中</span>
     ) : (
       <span className="camera-overlay-hint">全身が入ると開始</span>
@@ -473,12 +495,17 @@ export default function GaitAssessment() {
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitching={isSwitchingCamera}
-            isCameraSwitchDisabled={phase === "measuring"}
+            isCameraSwitchDisabled={phase === "loading" || phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
           <div className="button-row ptosis-button-row">
             {phase === "idle" ? <PrimaryButton onClick={start}>監視開始</PrimaryButton> : null}
+            {phase === "loading" ? (
+              <button className="ghost-button" onClick={cancel}>
+                中止する
+              </button>
+            ) : null}
             {phase === "waiting" ? (
               <>
                 <button className="ghost-button" onClick={cancel}>

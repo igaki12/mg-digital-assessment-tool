@@ -20,6 +20,7 @@ import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type ExpressionPhase =
   | "idle"
+  | "loading"
   | "restWaiting"
   | "restHolding"
   | "smileWaiting"
@@ -368,6 +369,7 @@ export default function ExpressionAssessment() {
     if (
       currentPhase === "restWaiting" ||
       currentPhase === "restHolding" ||
+      currentPhase === "loading" ||
       currentPhase === "smileWaiting" ||
       currentPhase === "smileHolding"
     ) {
@@ -391,6 +393,12 @@ export default function ExpressionAssessment() {
           );
         }
       }
+      updatePhase("loading");
+      setStatusText("解析モジュールを起動しています。少しお待ちください。");
+      await getFaceLandmarker();
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
       updatePhase("restWaiting");
       setStatusText(`1/${EXPRESSION_TOTAL_SETS}セット目: 自然な顔でカメラを見てください。`);
       void announcementController.interruptAndPlay("expression.rest");
@@ -407,6 +415,7 @@ export default function ExpressionAssessment() {
   const switchCamera = useCallback(async () => {
     const currentPhase = phaseRef.current;
     if (
+      currentPhase === "loading" ||
       currentPhase === "restHolding" ||
       currentPhase === "smileHolding" ||
       isSwitchingCamera
@@ -508,6 +517,7 @@ export default function ExpressionAssessment() {
   }, [showOverlay]);
 
   const isRunning =
+    phase === "loading" ||
     phase === "restWaiting" ||
     phase === "restHolding" ||
     phase === "smileWaiting" ||
@@ -515,17 +525,21 @@ export default function ExpressionAssessment() {
   const phaseTitle =
     phase === "idle"
       ? "待機中"
-      : phase === "restWaiting"
-        ? `自然表情の位置合わせ ${currentSet}/${EXPRESSION_TOTAL_SETS}`
-        : phase === "restHolding"
-          ? `自然表情を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
-          : phase === "smileWaiting"
-            ? `笑顔の準備 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
-            : phase === "smileHolding"
-              ? `笑顔を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
-              : "保存待ち";
+      : phase === "loading"
+        ? "起動中"
+        : phase === "restWaiting"
+          ? `自然表情の位置合わせ ${currentSet}/${EXPRESSION_TOTAL_SETS}`
+          : phase === "restHolding"
+            ? `自然表情を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
+            : phase === "smileWaiting"
+              ? `笑顔の準備 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
+              : phase === "smileHolding"
+                ? `笑顔を計測中 ${currentSet}/${EXPRESSION_TOTAL_SETS}`
+                : "保存待ち";
   const overlayPrimary =
-    phase === "restHolding" || phase === "smileHolding" ? (
+    phase === "loading" ? (
+      <span className="camera-overlay-hint">起動中...</span>
+    ) : phase === "restHolding" || phase === "smileHolding" ? (
       <span className="camera-overlay-countdown">{countdown}</span>
     ) : phase === "completed" ? (
       <span className="camera-overlay-hint">保存待ち</span>
@@ -565,13 +579,20 @@ export default function ExpressionAssessment() {
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitching={isSwitchingCamera}
-            isCameraSwitchDisabled={phase === "restHolding" || phase === "smileHolding"}
+            isCameraSwitchDisabled={
+              phase === "loading" || phase === "restHolding" || phase === "smileHolding"
+            }
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
           <div className="button-row ptosis-button-row">
             {phase === "idle" ? <PrimaryButton onClick={start}>測定開始</PrimaryButton> : null}
-            {isRunning ? (
+            {phase === "loading" ? (
+              <button className="ghost-button" onClick={cancel}>
+                中止する
+              </button>
+            ) : null}
+            {isRunning && phase !== "loading" ? (
               <>
                 <button className="ghost-button" onClick={cancel}>
                   中止する

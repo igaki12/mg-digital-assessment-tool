@@ -23,6 +23,7 @@ export default function LimbAssessment() {
   const seriesRef = useRef<TimeSeriesEntry[]>([]);
   const drawingUtilsRef = useRef<DrawingUtils | null>(null);
   const [running, setRunning] = useState(false);
+  const [isLoadingLandmarker, setIsLoadingLandmarker] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [cameraFacingMode, setCameraFacingMode] =
     useState<CameraFacingMode>("user");
@@ -55,6 +56,7 @@ export default function LimbAssessment() {
     if (canvas && ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+    setIsLoadingLandmarker(false);
     setRunning(false);
   }, []);
 
@@ -169,53 +171,69 @@ export default function LimbAssessment() {
   }, [save, showOverlay]);
 
   const start = useCallback(async () => {
-    if (running) {
+    if (isLoadingLandmarker || running) {
       return;
     }
-    announcementController.enableAutoplay();
-    announcementController.stopCurrent();
-    const stream = await openCameraStream(cameraFacingMode);
-    streamRef.current = stream;
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-      if (canvasRef.current) {
-        syncOverlayCanvas(
-          videoRef.current,
-          canvasRef.current,
-          frameElementRef.current
-        );
-      }
-    }
-    seriesRef.current = [];
-    isSavingRef.current = false;
-    progressCueRef.current = {
-      progress30: false,
-      progress60: false,
-      remaining10: false,
-      done: false
-    };
-    startTimeRef.current = Date.now();
-    setDuration(0);
-    setRunning(true);
-    void (async () => {
-      const completed = await announcementController.interruptAndPlay("limbs.start");
-      if (completed) {
-        const durationCompleted = await announcementController.play("limbs.duration90");
-        if (durationCompleted) {
-          await announcementController.play("limbs.positioning");
+    try {
+      announcementController.enableAutoplay();
+      announcementController.stopCurrent();
+      const stream = await openCameraStream(cameraFacingMode);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        if (canvasRef.current) {
+          syncOverlayCanvas(
+            videoRef.current,
+            canvasRef.current,
+            frameElementRef.current
+          );
         }
       }
-    })();
-    frameRef.current = requestAnimationFrame(tick);
-  }, [cameraFacingMode, running, tick]);
+      setIsLoadingLandmarker(true);
+      await getPoseLandmarker();
+      if (!streamRef.current?.active) {
+        return;
+      }
+      setIsLoadingLandmarker(false);
+      seriesRef.current = [];
+      isSavingRef.current = false;
+      progressCueRef.current = {
+        progress30: false,
+        progress60: false,
+        remaining10: false,
+        done: false
+      };
+      startTimeRef.current = Date.now();
+      setDuration(0);
+      setRunning(true);
+      void (async () => {
+        const completed = await announcementController.interruptAndPlay("limbs.start");
+        if (completed) {
+          const durationCompleted = await announcementController.play("limbs.duration90");
+          if (durationCompleted) {
+            await announcementController.play("limbs.positioning");
+          }
+        }
+      })();
+      frameRef.current = requestAnimationFrame(tick);
+    } catch (error) {
+      console.warn("Unable to start limb assessment", error);
+      stopStream();
+    }
+  }, [cameraFacingMode, isLoadingLandmarker, running, stopStream, tick]);
 
   const switchCamera = useCallback(() => {
-    if (running) {
+    if (isLoadingLandmarker || running) {
       return;
     }
     setCameraFacingMode((current) => getNextCameraFacingMode(current));
-  }, [running]);
+  }, [isLoadingLandmarker, running]);
+
+  const cancel = useCallback(() => {
+    stopStream();
+    announcementController.stopCurrent();
+  }, [stopStream]);
 
   useEffect(() => {
     return () => {
@@ -230,8 +248,11 @@ export default function LimbAssessment() {
     }
   }, [showOverlay]);
 
-  const showIntroContent = !isCompactViewport || !running;
-  const overlayPrimary = running ? (
+  const isActive = isLoadingLandmarker || running;
+  const showIntroContent = !isCompactViewport || !isActive;
+  const overlayPrimary = isLoadingLandmarker ? (
+    <span className="camera-overlay-hint">起動中...</span>
+  ) : running ? (
     <span className="camera-overlay-countdown">
       {Math.max(0, LIMB_DURATION_SEC - duration)}
     </span>
@@ -261,17 +282,27 @@ export default function LimbAssessment() {
           ) : null}
           <CameraOverlay
             tone={running ? "active" : "guide"}
-            topLabel={running ? "計測中" : "待機中"}
-            topMessage={running ? "90秒間、肩の高さでキープ" : "腕が枠内に収まるように調整"}
+            topLabel={isLoadingLandmarker ? "起動中" : running ? "計測中" : "待機中"}
+            topMessage={
+              isLoadingLandmarker
+                ? "解析モジュールを起動しています。少しお待ちください。"
+                : running
+                  ? "90秒間、肩の高さでキープ"
+                  : "腕が枠内に収まるように調整"
+            }
             centerPrimary={overlayPrimary}
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
-            isCameraSwitchDisabled={running}
+            isCameraSwitchDisabled={isLoadingLandmarker || running}
           />
         </div>
         <div className="camera-sidebar">
           <div className="button-row">
-            {running ? (
+            {isLoadingLandmarker ? (
+              <button className="ghost-button" onClick={cancel}>
+                中止する
+              </button>
+            ) : running ? (
               <>
                 <button className="ghost-button" onClick={save}>
                   停止して保存

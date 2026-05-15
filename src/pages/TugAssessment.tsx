@@ -24,7 +24,7 @@ import { getUserHeight } from "../storage/settings";
 import type { TimeSeriesEntry } from "../types";
 import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
-type TugPhase = "idle" | "positioning" | "ready" | "measuring";
+type TugPhase = "idle" | "loading" | "positioning" | "ready" | "measuring";
 type TugMotionPhase =
   | "standingUp"
   | "walkOut"
@@ -446,6 +446,12 @@ export default function TugAssessment() {
           );
         }
       }
+      updatePhase("loading");
+      setStatusText("解析モジュールを起動しています。少しお待ちください。");
+      await getPoseLandmarker();
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
       updatePhase("positioning");
       setStatusText("椅子に座った状態で、全身が画面に収まる位置に調整してください。");
       void announcementController.interruptAndPlay("tug.positioning");
@@ -460,7 +466,11 @@ export default function TugAssessment() {
   }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
 
   const switchCamera = useCallback(async () => {
-    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+    if (
+      phaseRef.current === "loading" ||
+      phaseRef.current === "measuring" ||
+      isSwitchingCamera
+    ) {
       return;
     }
 
@@ -614,17 +624,24 @@ export default function TugAssessment() {
   }, [showOverlay]);
 
   const isRunning =
-    phase === "positioning" || phase === "ready" || phase === "measuring";
+    phase === "loading" ||
+    phase === "positioning" ||
+    phase === "ready" ||
+    phase === "measuring";
   const phaseTitle =
     phase === "idle"
       ? "準備"
-      : phase === "positioning"
-        ? "位置合わせ"
-        : phase === "ready"
-          ? "開始待ち"
-          : "計測中";
+      : phase === "loading"
+        ? "起動中"
+        : phase === "positioning"
+          ? "位置合わせ"
+          : phase === "ready"
+            ? "開始待ち"
+            : "計測中";
   const overlayPrimary =
-    phase === "measuring" ? (
+    phase === "loading" ? (
+      <span className="camera-overlay-hint">起動中...</span>
+    ) : phase === "measuring" ? (
       <span className="camera-overlay-countdown">{elapsedSec.toFixed(1)}</span>
     ) : (
       <span className="camera-overlay-hint">
@@ -692,13 +709,18 @@ export default function TugAssessment() {
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitching={isSwitchingCamera}
-            isCameraSwitchDisabled={phase === "measuring"}
+            isCameraSwitchDisabled={phase === "loading" || phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
           <div className="button-row ptosis-button-row">
             {phase === "idle" ? (
               <PrimaryButton onClick={startCamera}>カメラを準備</PrimaryButton>
+            ) : null}
+            {phase === "loading" ? (
+              <button className="ghost-button" onClick={cancel}>
+                中止する
+              </button>
             ) : null}
             {phase === "positioning" || phase === "ready" ? (
               <>

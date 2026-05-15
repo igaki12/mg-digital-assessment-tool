@@ -21,6 +21,7 @@ import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
 type PosturePhase =
   | "idle"
+  | "loading"
   | "frontWaiting"
   | "frontHolding"
   | "sideWaiting"
@@ -358,6 +359,7 @@ export default function PostureAssessment() {
     if (
       currentPhase === "frontWaiting" ||
       currentPhase === "frontHolding" ||
+      currentPhase === "loading" ||
       currentPhase === "sideWaiting" ||
       currentPhase === "sideHolding"
     ) {
@@ -381,6 +383,12 @@ export default function PostureAssessment() {
           );
         }
       }
+      updatePhase("loading");
+      setStatusText("解析モジュールを起動しています。少しお待ちください。");
+      await getPoseLandmarker();
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
       updatePhase("frontWaiting");
       setStatusText("正面を向き、足を肩幅に開いて立ってください。");
       void announcementController.interruptAndPlay("posture.frontIntro");
@@ -397,6 +405,7 @@ export default function PostureAssessment() {
   const switchCamera = useCallback(async () => {
     const currentPhase = phaseRef.current;
     if (
+      currentPhase === "loading" ||
       currentPhase === "frontHolding" ||
       currentPhase === "sideHolding" ||
       isSwitchingCamera
@@ -504,6 +513,7 @@ export default function PostureAssessment() {
   }, [showOverlay]);
 
   const isRunning =
+    phase === "loading" ||
     phase === "frontWaiting" ||
     phase === "frontHolding" ||
     phase === "sideWaiting" ||
@@ -511,17 +521,21 @@ export default function PostureAssessment() {
   const phaseTitle =
     phase === "idle"
       ? "待機中"
-      : phase === "frontWaiting"
-        ? "正面の位置合わせ"
-        : phase === "frontHolding"
-          ? "正面を計測中"
-          : phase === "sideWaiting"
-            ? "側面の位置合わせ"
-            : phase === "sideHolding"
-              ? "側面を計測中"
-              : "保存待ち";
+      : phase === "loading"
+        ? "起動中"
+        : phase === "frontWaiting"
+          ? "正面の位置合わせ"
+          : phase === "frontHolding"
+            ? "正面を計測中"
+            : phase === "sideWaiting"
+              ? "側面の位置合わせ"
+              : phase === "sideHolding"
+                ? "側面を計測中"
+                : "保存待ち";
   const overlayPrimary =
-    phase === "frontHolding" || phase === "sideHolding" ? (
+    phase === "loading" ? (
+      <span className="camera-overlay-hint">起動中...</span>
+    ) : phase === "frontHolding" || phase === "sideHolding" ? (
       <span className="camera-overlay-countdown">{countdown}</span>
     ) : phase === "completed" ? (
       <span className="camera-overlay-hint">保存待ち</span>
@@ -559,13 +573,20 @@ export default function PostureAssessment() {
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitching={isSwitchingCamera}
-            isCameraSwitchDisabled={phase === "frontHolding" || phase === "sideHolding"}
+            isCameraSwitchDisabled={
+              phase === "loading" || phase === "frontHolding" || phase === "sideHolding"
+            }
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
           <div className="button-row ptosis-button-row">
             {phase === "idle" ? <PrimaryButton onClick={start}>測定開始</PrimaryButton> : null}
-            {isRunning ? (
+            {phase === "loading" ? (
+              <button className="ghost-button" onClick={cancel}>
+                中止する
+              </button>
+            ) : null}
+            {isRunning && phase !== "loading" ? (
               <>
                 <button className="ghost-button" onClick={cancel}>
                   中止する
