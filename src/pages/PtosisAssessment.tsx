@@ -13,7 +13,7 @@ import { extractEar, getFaceLandmarker, isFaceCentered } from "../mediapipe/face
 import type { TimeSeriesEntry } from "../types";
 import { getNextCameraFacingMode, openCameraStream } from "../utils/camera";
 
-type PtosisPhase = "idle" | "waiting" | "measuring" | "completed";
+type PtosisPhase = "idle" | "loading" | "waiting" | "measuring" | "completed";
 
 const PTOSIS_DURATION_SEC = 60;
 const PTOSIS_DURATION_MS = PTOSIS_DURATION_SEC * 1000;
@@ -315,7 +315,11 @@ export default function PtosisAssessment() {
   }, [beginMeasurement, stopStream, updatePhase]);
 
   const start = useCallback(async () => {
-    if (phaseRef.current === "waiting" || phaseRef.current === "measuring") {
+    if (
+      phaseRef.current === "loading" ||
+      phaseRef.current === "waiting" ||
+      phaseRef.current === "measuring"
+    ) {
       return;
     }
     try {
@@ -336,6 +340,12 @@ export default function PtosisAssessment() {
           );
         }
       }
+      updatePhase("loading");
+      setStatusText("解析モジュールを起動しています。少しお待ちください。");
+      await getFaceLandmarker();
+      if (runId !== runIdRef.current || !streamRef.current?.active) {
+        return;
+      }
       updatePhase("waiting");
       setStatusText("頭を動かさずに、顔を枠に合わせてください。");
       void announcementController.interruptAndPlay("ptosis.intro");
@@ -350,7 +360,11 @@ export default function PtosisAssessment() {
   }, [cameraFacingMode, resetMeasurement, tick, updatePhase]);
 
   const switchCamera = useCallback(async () => {
-    if (phaseRef.current === "measuring" || isSwitchingCamera) {
+    if (
+      phaseRef.current === "loading" ||
+      phaseRef.current === "measuring" ||
+      isSwitchingCamera
+    ) {
       return;
     }
 
@@ -421,9 +435,11 @@ export default function PtosisAssessment() {
     }
   }, [showOverlay]);
 
-  const isRunning = phase === "waiting" || phase === "measuring";
+  const isRunning = phase === "loading" || phase === "waiting" || phase === "measuring";
   const overlayPrimary =
-    phase === "measuring" ? (
+    phase === "loading" ? (
+      <span className="camera-overlay-hint">起動中...</span>
+    ) : phase === "measuring" ? (
       <span className="camera-overlay-countdown">
         {Math.max(0, PTOSIS_DURATION_SEC - elapsed)}
       </span>
@@ -434,6 +450,8 @@ export default function PtosisAssessment() {
   const phaseTitle =
     phase === "idle"
       ? "待機中"
+      : phase === "loading"
+        ? "起動中"
       : phase === "waiting"
         ? "位置合わせ"
         : phase === "measuring"
@@ -472,7 +490,7 @@ export default function PtosisAssessment() {
             cameraFacingMode={cameraFacingMode}
             onSwitchCamera={switchCamera}
             isCameraSwitching={isSwitchingCamera}
-            isCameraSwitchDisabled={phase === "measuring"}
+            isCameraSwitchDisabled={phase === "loading" || phase === "measuring"}
           />
         </div>
         <div className="camera-sidebar ptosis-camera-sidebar">
