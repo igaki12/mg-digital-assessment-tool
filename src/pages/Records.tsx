@@ -1122,57 +1122,65 @@ export default function Records() {
   const selectedSessionId = selectedSessionIdByType[activeType];
   const selectedSession =
     activeSessions.find((session) => session.id === selectedSessionId) ?? null;
-  const detailSession = isCompactViewport
+  const detailSession = selectedSession;
+  const modalDetailSession = isCompactViewport
     ? activeSessions.find((session) => session.id === modalSessionId) ?? null
-    : selectedSession;
+    : null;
 
   useEffect(() => {
     setModalSessionId(null);
   }, [activeType]);
 
   useEffect(() => {
-    if (!detailSession) {
+    const sessionsToLoad = [detailSession, modalDetailSession].filter(
+      (session, index, self): session is SessionMeta =>
+        session !== null && self.findIndex((item) => item?.id === session.id) === index
+    );
+
+    if (sessionsToLoad.length === 0) {
       return;
     }
 
-    const sessionId = detailSession.id;
+    sessionsToLoad.forEach((session) => {
+      const sessionId = session.id;
 
-    if (!Object.prototype.hasOwnProperty.call(recordCache, sessionId)) {
-      void getTimeSeries(sessionId).then((record) => {
-        setRecordCache((current) => {
-          if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
-            return current;
-          }
-          return { ...current, [sessionId]: record ?? null };
+      if (!Object.prototype.hasOwnProperty.call(recordCache, sessionId)) {
+        void getTimeSeries(sessionId).then((record) => {
+          setRecordCache((current) => {
+            if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
+              return current;
+            }
+            return { ...current, [sessionId]: record ?? null };
+          });
         });
-      });
-    }
+      }
 
-    if (!Object.prototype.hasOwnProperty.call(videoCache, sessionId)) {
-      void getVideo(sessionId).then((video) => {
-        setVideoCache((current) => {
-          if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
-            return current;
-          }
-          return { ...current, [sessionId]: video ?? null };
+      if (!Object.prototype.hasOwnProperty.call(videoCache, sessionId)) {
+        void getVideo(sessionId).then((video) => {
+          setVideoCache((current) => {
+            if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
+              return current;
+            }
+            return { ...current, [sessionId]: video ?? null };
+          });
         });
-      });
-    }
+      }
 
-    if (!Object.prototype.hasOwnProperty.call(audioCache, sessionId)) {
-      void getAudio(sessionId).then((audio) => {
-        setAudioCache((current) => {
-          if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
-            return current;
-          }
-          return { ...current, [sessionId]: audio ?? null };
+      if (!Object.prototype.hasOwnProperty.call(audioCache, sessionId)) {
+        void getAudio(sessionId).then((audio) => {
+          setAudioCache((current) => {
+            if (Object.prototype.hasOwnProperty.call(current, sessionId)) {
+              return current;
+            }
+            return { ...current, [sessionId]: audio ?? null };
+          });
         });
-      });
-    }
-  }, [detailSession, audioCache, videoCache]);
+      }
+    });
+  }, [detailSession, modalDetailSession, recordCache, audioCache, videoCache]);
 
   useEffect(() => {
-    if (!isCompactViewport || !detailSession) {
+    if (!isCompactViewport || !modalDetailSession) {
       return;
     }
 
@@ -1195,10 +1203,10 @@ export default function Records() {
       body.style.overflow = originalOverflow;
       window.scrollTo(0, scrollY);
     };
-  }, [detailSession, isCompactViewport]);
+  }, [modalDetailSession, isCompactViewport]);
 
   useEffect(() => {
-    if (!isCompactViewport || !detailSession) {
+    if (!isCompactViewport || !modalDetailSession) {
       return;
     }
 
@@ -1212,7 +1220,7 @@ export default function Records() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [detailSession, isCompactViewport]);
+  }, [modalDetailSession, isCompactViewport]);
 
   const activeMetricConfigs = metricConfigsByType[activeType];
   const availableMetricConfigs = activeMetricConfigs.filter((config) =>
@@ -1274,6 +1282,15 @@ export default function Records() {
   const detailRecord = detailSession ? recordCache[detailSession.id] : undefined;
   const detailVideo = detailSession ? videoCache[detailSession.id] : undefined;
   const detailAudio = detailSession ? audioCache[detailSession.id] : undefined;
+  const modalDetailRecord = modalDetailSession
+    ? recordCache[modalDetailSession.id]
+    : undefined;
+  const modalDetailVideo = modalDetailSession
+    ? videoCache[modalDetailSession.id]
+    : undefined;
+  const modalDetailAudio = modalDetailSession
+    ? audioCache[modalDetailSession.id]
+    : undefined;
   const isDetailRecordLoading =
     detailSession !== null &&
     !Object.prototype.hasOwnProperty.call(recordCache, detailSession.id);
@@ -1281,6 +1298,13 @@ export default function Records() {
     detailSession !== null &&
     (!Object.prototype.hasOwnProperty.call(videoCache, detailSession.id) ||
       !Object.prototype.hasOwnProperty.call(audioCache, detailSession.id));
+  const isModalDetailRecordLoading =
+    modalDetailSession !== null &&
+    !Object.prototype.hasOwnProperty.call(recordCache, modalDetailSession.id);
+  const isModalDetailAssetLoading =
+    modalDetailSession !== null &&
+    (!Object.prototype.hasOwnProperty.call(videoCache, modalDetailSession.id) ||
+      !Object.prototype.hasOwnProperty.call(audioCache, modalDetailSession.id));
 
   const videoUrl = useMemo(() => {
     if (!detailVideo) {
@@ -1313,6 +1337,38 @@ export default function Records() {
       audioUrls.forEach((clip) => URL.revokeObjectURL(clip.url));
     };
   }, [audioUrls]);
+
+  const modalVideoUrl = useMemo(() => {
+    if (!modalDetailVideo) {
+      return null;
+    }
+    return URL.createObjectURL(modalDetailVideo.blob);
+  }, [modalDetailVideo]);
+
+  useEffect(() => {
+    if (!modalVideoUrl) {
+      return;
+    }
+    return () => {
+      URL.revokeObjectURL(modalVideoUrl);
+    };
+  }, [modalVideoUrl]);
+
+  const modalAudioUrls = useMemo<AudioClipWithUrl[]>(() => {
+    if (!modalDetailAudio) {
+      return [];
+    }
+    return modalDetailAudio.clips.map((clip) => ({
+      ...clip,
+      url: URL.createObjectURL(clip.blob)
+    }));
+  }, [modalDetailAudio]);
+
+  useEffect(() => {
+    return () => {
+      modalAudioUrls.forEach((clip) => URL.revokeObjectURL(clip.url));
+    };
+  }, [modalAudioUrls]);
 
   const graphEmptyMessage = useMemo(() => {
     if (activeSessions.length === 0) {
@@ -1600,25 +1656,23 @@ export default function Records() {
         </div>
 
         <div className="records-side">
-          {!isCompactViewport ? (
-            <div className="card records-detail-card">
-              {detailSession ? (
-                <DetailPanel
-                  session={detailSession}
-                  record={detailRecord}
-                  videoUrl={videoUrl}
-                  audioUrls={audioUrls}
-                  isRecordLoading={isDetailRecordLoading}
-                  isAssetLoading={isDetailAssetLoading}
-                />
-              ) : (
-                <div className="records-detail-empty-state">
-                  <h2>詳細</h2>
-                  <p>一覧から記録を選ぶと、詳細データと添付データを確認できます。</p>
-                </div>
-              )}
-            </div>
-          ) : null}
+          <div className="card records-detail-card">
+            {detailSession ? (
+              <DetailPanel
+                session={detailSession}
+                record={detailRecord}
+                videoUrl={videoUrl}
+                audioUrls={audioUrls}
+                isRecordLoading={isDetailRecordLoading}
+                isAssetLoading={isDetailAssetLoading}
+              />
+            ) : (
+              <div className="records-detail-empty-state">
+                <h2>詳細</h2>
+                <p>一覧から記録を選ぶと、詳細データと添付データを確認できます。</p>
+              </div>
+            )}
+          </div>
 
           <div className="card records-list-card">
             <div className="records-card-header">
@@ -1680,7 +1734,7 @@ export default function Records() {
         </div>
       </section>
 
-      {isCompactViewport && detailSession ? (
+      {isCompactViewport && modalDetailSession ? (
         <div
           className="modal-backdrop"
           role="presentation"
@@ -1695,7 +1749,7 @@ export default function Records() {
           >
             <div className="records-modal-header">
               <div>
-                <p className="records-eyebrow">{typeLabels[detailSession.type]}</p>
+                <p className="records-eyebrow">{typeLabels[modalDetailSession.type]}</p>
                 <h2 id="records-detail-title">記録の詳細</h2>
               </div>
               <button
@@ -1717,12 +1771,12 @@ export default function Records() {
             </div>
 
             <DetailPanel
-              session={detailSession}
-              record={detailRecord}
-              videoUrl={videoUrl}
-              audioUrls={audioUrls}
-              isRecordLoading={isDetailRecordLoading}
-              isAssetLoading={isDetailAssetLoading}
+              session={modalDetailSession}
+              record={modalDetailRecord}
+              videoUrl={modalVideoUrl}
+              audioUrls={modalAudioUrls}
+              isRecordLoading={isModalDetailRecordLoading}
+              isAssetLoading={isModalDetailAssetLoading}
             />
           </div>
         </div>
