@@ -1600,6 +1600,26 @@ export default function Records() {
         </div>
 
         <div className="records-side">
+          {!isCompactViewport ? (
+            <div className="card records-detail-card">
+              {detailSession ? (
+                <DetailPanel
+                  session={detailSession}
+                  record={detailRecord}
+                  videoUrl={videoUrl}
+                  audioUrls={audioUrls}
+                  isRecordLoading={isDetailRecordLoading}
+                  isAssetLoading={isDetailAssetLoading}
+                />
+              ) : (
+                <div className="records-detail-empty-state">
+                  <h2>詳細</h2>
+                  <p>一覧から記録を選ぶと、詳細データと添付データを確認できます。</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <div className="card records-list-card">
             <div className="records-card-header">
               <div>
@@ -1657,26 +1677,6 @@ export default function Records() {
               </div>
             )}
           </div>
-
-          {!isCompactViewport ? (
-            <div className="card records-detail-card">
-              {detailSession ? (
-                <DetailPanel
-                  session={detailSession}
-                  record={detailRecord}
-                  videoUrl={videoUrl}
-                  audioUrls={audioUrls}
-                  isRecordLoading={isDetailRecordLoading}
-                  isAssetLoading={isDetailAssetLoading}
-                />
-              ) : (
-                <div className="records-detail-empty-state">
-                  <h2>詳細</h2>
-                  <p>一覧から記録を選ぶと、詳細データと添付データを確認できます。</p>
-                </div>
-              )}
-            </div>
-          ) : null}
         </div>
       </section>
 

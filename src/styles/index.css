@@ -1303,9 +1303,9 @@ p {
   }
 }
 
-@media (min-width: 1380px) {
+@media (min-width: 840px) {
   .records-side {
-    grid-template-columns: minmax(300px, 0.86fr) minmax(0, 1.14fr);
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
   }
 }
 
